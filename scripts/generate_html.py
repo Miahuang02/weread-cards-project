@@ -143,10 +143,36 @@ body {
   width: 0%; transition: width 0.2s;
 }
 .progress-text {
-  position: fixed; bottom: 10px; right: 14px; z-index:10;
   font-size: 12px; color: var(--text-secondary);
-  background: rgba(255,255,255,0.8); padding: 2px 8px;
-  border-radius: 10px;
+}
+.jump-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index:10;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border);
+  font-size: 13px; color: var(--text-secondary);
+}
+.jump-bar #progressText {
+  color: var(--accent); font-weight: 500;
+  min-width: 90px; text-align: center;
+}
+.jump-label { font-size: 12px; }
+.jump-bar input[type=number] {
+  width: 60px; padding: 4px 6px; font-size: 14px;
+  border: 1px solid var(--border); border-radius: 8px;
+  text-align: center; outline: none;
+  background: var(--card-bg);
+}
+.jump-bar input[type=number]:focus { border-color: var(--accent); }
+.jump-hint { font-size: 12px; }
+.jump-bar button {
+  padding: 4px 10px; font-size: 13px;
+  border: none; border-radius: 8px;
+  background: var(--accent); color: white;
+  cursor: pointer;
 }
 /* 顶部切换按钮 */
 .top-btns {
@@ -189,7 +215,13 @@ body {
 </div>
 
 <div class="progress" id="progress"><div class="progress-bar" id="progressBar"></div></div>
-<div class="progress-text" id="progressText">0 / 0</div>
+<div class="jump-bar">
+  <span id="progressText">0 / 0</span>
+  <span class="jump-label">跳转:</span>
+  <input type="number" id="jumpInput" min="1" placeholder="页码" inputmode="numeric">
+  <span class="jump-hint">/ <span id="totalNum">0</span></span>
+  <button id="jumpBtn">Go</button>
+</div>
 
 <script>
 const ALL_CARDS = __CARDS_JSON__;
@@ -254,7 +286,8 @@ function render() {
   textEl.innerHTML = esc(c.text);
   chapterEl.innerHTML = esc(c.chapter || '');
   progressBar.style.width = ((index + 1) / shuffled.length * 100) + '%';
-  progressText.textContent = '第' + (index + 1) + '/' + shuffled.length + '张 · 第' + round + '轮';
+  progressText.textContent = (index + 1) + ' / ' + shuffled.length + ' · 第' + round + '轮';
+  document.getElementById('totalNum').textContent = shuffled.length;
 }
 
 function next() {
@@ -319,6 +352,24 @@ document.getElementById('toggleHeader').addEventListener('click', function(e) {
   e.stopPropagation();
   header.classList.toggle('hidden');
 });
+
+// 跳转功能
+const jumpInput = document.getElementById('jumpInput');
+const jumpBtn = document.getElementById('jumpBtn');
+function doJump() {
+  const n = parseInt(jumpInput.value);
+  if (isNaN(n) || n < 1 || n > shuffled.length) return;
+  index = n - 1;
+  render();
+  jumpInput.value = '';
+  jumpInput.blur();
+}
+jumpBtn.addEventListener('click', function(e) { e.stopPropagation(); doJump(); });
+jumpInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); doJump(); }
+  e.stopPropagation();
+});
+jumpInput.addEventListener('click', function(e) { e.stopPropagation(); });
 
 searchBox.addEventListener('input', updateCards);
 bookFilter.addEventListener('change', updateCards);
