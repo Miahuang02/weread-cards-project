@@ -2,7 +2,7 @@
 """
 generate_html.py
 读取 highlights.json，生成手机卡片网页 index.html
-功能：左右滑动翻卡片、搜索、按书筛选、下载PDF入口
+交互：单张卡片占满屏幕，点击/滑动切换下一张，支持按书筛选和搜索
 """
 import json
 from pathlib import Path
@@ -20,7 +20,6 @@ def load_highlights():
 
 
 def generate_html(highlights):
-    # 按书分组统计
     books = {}
     for h in highlights:
         name = h.get("book", "未知")
@@ -28,7 +27,6 @@ def generate_html(highlights):
             books[name] = 0
         books[name] += 1
 
-    # 生成卡片数据（JSON 嵌入页面，前端渲染）
     cards_json = json.dumps(highlights, ensure_ascii=False)
 
     books_options = "".join(
@@ -49,6 +47,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <title>微信读书划线卡片</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
+html, body { height: 100%; overflow: hidden; }
 :root {
   --bg: #f5f5f7;
   --card-bg: #ffffff;
@@ -62,73 +61,109 @@ body {
   background: var(--bg);
   color: var(--text);
   -webkit-tap-highlight-color: transparent;
+  touch-action: pan-y;
 }
+/* 顶部控制栏 */
 .header {
-  position: sticky; top:0; z-index:10;
-  background: rgba(245,245,247,0.9);
+  position: fixed; top:0; left:0; right:0; z-index:10;
+  background: rgba(245,245,247,0.92);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
-  padding: 12px 16px 8px;
+  padding: 10px 14px 8px;
+  transform: translateY(0);
+  transition: transform 0.25s ease;
 }
-.header h1 { font-size:18px; font-weight:600; margin-bottom:8px; }
+.header.hidden { transform: translateY(-100%); }
+.header h1 { font-size:16px; font-weight:600; margin-bottom:8px; }
 .controls { display:flex; gap:8px; align-items:center; }
 .controls input[type=text] {
-  flex:1; padding:8px 12px; font-size:15px;
+  flex:1; padding:8px 12px; font-size:14px;
   border:1px solid var(--border); border-radius:10px;
   background:var(--card-bg); outline:none;
 }
 .controls input[type=text]:focus { border-color:var(--accent); }
 .controls select {
-  padding:8px 12px; font-size:14px; max-width:40%;
+  padding:8px 10px; font-size:14px; max-width:45%;
   border:1px solid var(--border); border-radius:10px;
   background:var(--card-bg); color:var(--text);
 }
-.card-container {
-  display:flex; flex-direction:column; gap:12px;
-  padding:16px; padding-bottom:80px;
+/* 全屏卡片容器 */
+.stage {
+  position: fixed; top:0; left:0; width:100%; height:100%;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
 }
 .card {
-  background:var(--card-bg);
-  border-radius:16px;
-  padding:24px 20px;
-  box-shadow:0 1px 3px rgba(0,0,0,0.08);
-  transition: transform 0.2s;
+  width: 100%; max-width: 560px;
+  height: 76vh; max-height: 720px;
+  background: var(--card-bg);
+  border-radius: 24px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  padding: 32px 28px;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  text-align: center;
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
 }
-.card:active { transform:scale(0.98); }
-.card .book-tag {
-  font-size:12px; color:var(--accent);
-  margin-bottom:12px; font-weight:500;
+.card-text {
+  font-size: clamp(18px, 5vw, 28px);
+  line-height: 1.7;
+  color: var(--text);
+  font-weight: 400;
+  width: 100%;
+  overflow-y: auto;
 }
-.card .text {
-  font-size:17px; line-height:1.7;
-  color:var(--text); font-weight:400;
+.card-book {
+  position: absolute; top: 20px; left: 0; right: 0;
+  font-size: 13px; color: var(--accent);
+  font-weight: 500; padding: 0 20px;
 }
-.card .chapter {
-  font-size:12px; color:var(--text-secondary);
-  margin-top:16px;
+.card-chapter {
+  position: absolute; bottom: 20px; left: 0; right: 0;
+  font-size: 12px; color: var(--text-secondary);
+}
+.card-hint {
+  position: absolute; bottom: 48px; left: 0; right: 0;
+  font-size: 11px; color: #bbb;
 }
 .empty {
-  text-align:center; padding:60px 20px;
-  color:var(--text-secondary); font-size:15px;
+  text-align:center; color:var(--text-secondary); font-size:15px;
 }
-.footer {
-  position:fixed; bottom:0; left:0; right:0;
-  background:rgba(245,245,247,0.9);
-  backdrop-filter:blur(20px);
-  border-top:1px solid var(--border);
-  padding:12px 16px;
-  display:flex; justify-content:space-between; align-items:center;
-  font-size:13px; color:var(--text-secondary);
+/* 底部进度条 */
+.progress {
+  position: fixed; bottom:0; left:0; right:0; z-index:10;
+  height: 4px; background: rgba(0,0,0,0.06);
 }
-.footer a {
-  color:var(--accent); text-decoration:none;
-  font-weight:500;
+.progress-bar {
+  height: 100%; background: var(--accent);
+  width: 0%; transition: width 0.2s;
+}
+.progress-text {
+  position: fixed; bottom: 10px; right: 14px; z-index:10;
+  font-size: 12px; color: var(--text-secondary);
+  background: rgba(255,255,255,0.8); padding: 2px 8px;
+  border-radius: 10px;
+}
+/* 顶部切换按钮 */
+.top-btns {
+  position: fixed; top: 10px; right: 14px; z-index:11;
+  display: flex; gap: 8px;
+}
+.top-btns button {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: none; background: rgba(255,255,255,0.85);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  font-size: 16px; color: var(--text-secondary);
+  display: flex; align-items: center; justify-content: center;
 }
 </style>
 </head>
 <body>
-<div class="header">
+<div class="header" id="header">
   <h1>📚 划线卡片</h1>
   <div class="controls">
     <input type="text" id="search" placeholder="搜索划线内容...">
@@ -138,19 +173,39 @@ body {
     </select>
   </div>
 </div>
-<div class="card-container" id="cards">
-  <div class="empty">加载中...</div>
+
+<div class="top-btns">
+  <button id="toggleHeader" title="显示/隐藏控制栏">⚙️</button>
 </div>
-<div class="footer">
-  <span id="count"></span>
-  <a href="highlights.pdf" target="_blank">下载PDF</a>
+
+<div class="stage" id="stage">
+  <div class="card" id="card" style="display:none;">
+    <div class="card-book" id="cardBook"></div>
+    <div class="card-text" id="cardText"></div>
+    <div class="card-chapter" id="cardChapter"></div>
+    <div class="card-hint">点击切换下一张 · 左滑上一张 · 右滑下一张</div>
+  </div>
+  <div class="empty" id="empty">加载中...</div>
 </div>
+
+<div class="progress" id="progress"><div class="progress-bar" id="progressBar"></div></div>
+<div class="progress-text" id="progressText">0 / 0</div>
+
 <script>
 const ALL_CARDS = __CARDS_JSON__;
-const container = document.getElementById('cards');
+let cards = ALL_CARDS.slice();
+let index = 0;
+
+const header = document.getElementById('header');
+const cardEl = document.getElementById('card');
+const emptyEl = document.getElementById('empty');
+const bookEl = document.getElementById('cardBook');
+const textEl = document.getElementById('cardText');
+const chapterEl = document.getElementById('cardChapter');
+const progressBar = document.getElementById('progressBar');
+const progressText = document.getElementById('progressText');
 const searchBox = document.getElementById('search');
 const bookFilter = document.getElementById('bookFilter');
-const countEl = document.getElementById('count');
 
 function esc(s) {
   const d = document.createElement('div');
@@ -158,7 +213,7 @@ function esc(s) {
   return d.innerHTML;
 }
 
-function render() {
+function updateCards() {
   let filtered = ALL_CARDS;
   const q = searchBox.value.trim();
   const bk = bookFilter.value;
@@ -166,27 +221,87 @@ function render() {
   if (q) filtered = filtered.filter(c =>
     c.text.includes(q) || (c.book && c.book.includes(q))
   );
+  cards = filtered;
+  index = 0;
+  render();
+}
 
-  container.innerHTML = '';
-  if (filtered.length === 0) {
-    container.innerHTML = '<div class="empty">没有匹配的划线</div>';
-    countEl.textContent = '0 条';
+function render() {
+  if (cards.length === 0) {
+    cardEl.style.display = 'none';
+    emptyEl.style.display = 'block';
+    emptyEl.textContent = '没有匹配的划线';
+    progressBar.style.width = '0%';
+    progressText.textContent = '0 / 0';
     return;
   }
-  filtered.forEach(c => {
-    const div = document.createElement('div');
-    div.className = 'card';
-    let html = '<div class="book-tag">' + esc(c.book) + '</div>';
-    html += '<div class="text">' + esc(c.text) + '</div>';
-    if (c.chapter) html += '<div class="chapter">' + esc(c.chapter) + '</div>';
-    div.innerHTML = html;
-    container.appendChild(div);
-  });
-  countEl.textContent = filtered.length + ' 条划线';
+  cardEl.style.display = 'flex';
+  emptyEl.style.display = 'none';
+  const c = cards[index];
+  bookEl.innerHTML = esc(c.book);
+  textEl.innerHTML = esc(c.text);
+  chapterEl.innerHTML = esc(c.chapter || '');
+  progressBar.style.width = ((index + 1) / cards.length * 100) + '%';
+  progressText.textContent = (index + 1) + ' / ' + cards.length;
 }
-searchBox.addEventListener('input', render);
-bookFilter.addEventListener('change', render);
-render();
+
+function next() {
+  if (cards.length === 0) return;
+  index = (index + 1) % cards.length;
+  render();
+}
+
+function prev() {
+  if (cards.length === 0) return;
+  index = (index - 1 + cards.length) % cards.length;
+  render();
+}
+
+// 点击切换
+cardEl.addEventListener('click', function(e) {
+  // 点击右侧下一张，左侧上一张，中间也可下一张
+  const rect = cardEl.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  if (x < rect.width * 0.35) prev();
+  else next();
+});
+
+// 滑动切换
+let touchStartX = 0;
+let touchStartY = 0;
+cardEl.addEventListener('touchstart', function(e) {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, {passive: true});
+
+cardEl.addEventListener('touchend', function(e) {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+    if (dx > 0) prev();
+    else next();
+  }
+}, {passive: true});
+
+// 键盘切换
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'ArrowDown') {
+    e.preventDefault(); next();
+  } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+    e.preventDefault(); prev();
+  }
+});
+
+// 顶部控制栏显隐
+document.getElementById('toggleHeader').addEventListener('click', function(e) {
+  e.stopPropagation();
+  header.classList.toggle('hidden');
+});
+
+searchBox.addEventListener('input', updateCards);
+bookFilter.addEventListener('change', updateCards);
+
+updateCards();
 </script>
 </body>
 </html>"""
