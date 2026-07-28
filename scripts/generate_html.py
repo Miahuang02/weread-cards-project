@@ -63,7 +63,8 @@ body {
   background: var(--bg);
   color: var(--text);
   -webkit-tap-highlight-color: transparent;
-  touch-action: pan-y;
+  touch-action: none; /* 防止浏览器默认滑动返回/前进 */
+  overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
 }
 /* 顶部控制栏 */
@@ -105,15 +106,16 @@ body {
 .stage {
   position: fixed; top:0; left:0; width:100%; height:100%;
   display: flex; align-items: center; justify-content: center;
-  padding: 20px 16px;
+  padding: 90px 16px 100px;
 }
 .card {
   width: 100%; max-width: 600px;
-  height: 74vh; max-height: 760px;
+  height: auto; max-height: 100%;
+  min-height: 50vh;
   background: var(--card-bg);
   border-radius: 28px;
   box-shadow: var(--shadow);
-  padding: 40px 32px 60px;
+  padding: 48px 28px 60px;
   display: flex; flex-direction: column;
   justify-content: center; align-items: center;
   text-align: center;
@@ -122,17 +124,20 @@ body {
   user-select: none;
   -webkit-user-select: none;
   transition: transform 0.15s ease, opacity 0.2s ease;
+  overflow: hidden;
 }
 .card:active { transform: scale(0.97); }
 .card.fade-out { opacity: 0; transform: scale(0.95); }
 .card-text {
-  font-size: clamp(19px, 5.2vw, 30px);
-  line-height: 1.75;
+  font-size: clamp(17px, 4.8vw, 26px);
+  line-height: 1.7;
   color: var(--text);
   font-weight: 400;
   width: 100%;
+  max-height: calc(100vh - 260px);
   overflow-y: auto;
   letter-spacing: 0.5px;
+  padding: 10px 0;
 }
 .card-text::-webkit-scrollbar { width: 3px; }
 .card-text::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
@@ -358,22 +363,42 @@ cardEl.addEventListener('click', function(e) {
   else next();
 });
 
-// 滑动切换
+// 滑动切换（监听整个页面，防止浏览器默认返回）
 let touchStartX = 0;
 let touchStartY = 0;
-cardEl.addEventListener('touchstart', function(e) {
+let touchStartTime = 0;
+let isTouching = false;
+
+document.addEventListener('touchstart', function(e) {
+  // 跳过输入框上的滑动
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
   touchStartX = e.touches[0].clientX;
   touchStartY = e.touches[0].clientY;
-}, {passive: true});
+  touchStartTime = Date.now();
+  isTouching = true;
+}, {passive: false});
 
-cardEl.addEventListener('touchend', function(e) {
+document.addEventListener('touchmove', function(e) {
+  if (!isTouching) return;
+  const dx = e.touches[0].clientX - touchStartX;
+  const dy = e.touches[0].clientY - touchStartY;
+  // 水平滑动时阻止默认行为（防止浏览器返回/前进）
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
+    e.preventDefault();
+  }
+}, {passive: false});
+
+document.addEventListener('touchend', function(e) {
+  if (!isTouching) return;
+  isTouching = false;
   const dx = e.changedTouches[0].clientX - touchStartX;
   const dy = e.changedTouches[0].clientY - touchStartY;
-  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+  const dt = Date.now() - touchStartTime;
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50 && dt < 500) {
     if (dx > 0) prev();
     else next();
   }
-}, {passive: true});
+}, {passive: false});
 
 // 键盘切换
 document.addEventListener('keydown', function(e) {
