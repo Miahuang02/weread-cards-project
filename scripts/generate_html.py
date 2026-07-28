@@ -183,7 +183,7 @@ body {
     <div class="card-book" id="cardBook"></div>
     <div class="card-text" id="cardText"></div>
     <div class="card-chapter" id="cardChapter"></div>
-    <div class="card-hint">点击切换下一张 · 左滑上一张 · 右滑下一张</div>
+    <div class="card-hint">点击切换下一张 · 左滑右滑翻看 · 随机顺序</div>
   </div>
   <div class="empty" id="empty">加载中...</div>
 </div>
@@ -193,8 +193,9 @@ body {
 
 <script>
 const ALL_CARDS = __CARDS_JSON__;
-let cards = ALL_CARDS.slice();
-let index = 0;
+let shuffled = [];   // 当前轮次的随机顺序
+let index = 0;       // 当前在 shuffled 中的位置
+let round = 1;       // 当前是第几轮
 
 const header = document.getElementById('header');
 const cardEl = document.getElementById('card');
@@ -213,6 +214,16 @@ function esc(s) {
   return d.innerHTML;
 }
 
+// Fisher-Yates 洗牌算法
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 function updateCards() {
   let filtered = ALL_CARDS;
   const q = searchBox.value.trim();
@@ -221,13 +232,14 @@ function updateCards() {
   if (q) filtered = filtered.filter(c =>
     c.text.includes(q) || (c.book && c.book.includes(q))
   );
-  cards = filtered;
+  shuffled = shuffle(filtered);
   index = 0;
+  round = 1;
   render();
 }
 
 function render() {
-  if (cards.length === 0) {
+  if (shuffled.length === 0) {
     cardEl.style.display = 'none';
     emptyEl.style.display = 'block';
     emptyEl.textContent = '没有匹配的划线';
@@ -237,29 +249,39 @@ function render() {
   }
   cardEl.style.display = 'flex';
   emptyEl.style.display = 'none';
-  const c = cards[index];
+  const c = shuffled[index];
   bookEl.innerHTML = esc(c.book);
   textEl.innerHTML = esc(c.text);
   chapterEl.innerHTML = esc(c.chapter || '');
-  progressBar.style.width = ((index + 1) / cards.length * 100) + '%';
-  progressText.textContent = (index + 1) + ' / ' + cards.length;
+  progressBar.style.width = ((index + 1) / shuffled.length * 100) + '%';
+  progressText.textContent = '第' + (index + 1) + '/' + shuffled.length + '张 · 第' + round + '轮';
 }
 
 function next() {
-  if (cards.length === 0) return;
-  index = (index + 1) % cards.length;
+  if (shuffled.length === 0) return;
+  index++;
+  // 看完一轮，重新洗牌开始新一轮
+  if (index >= shuffled.length) {
+    shuffled = shuffle(shuffled);
+    index = 0;
+    round++;
+  }
   render();
 }
 
 function prev() {
-  if (cards.length === 0) return;
-  index = (index - 1 + cards.length) % cards.length;
+  if (shuffled.length === 0) return;
+  index--;
+  // 回到上一轮的最后一张
+  if (index < 0) {
+    round = Math.max(1, round - 1);
+    index = shuffled.length - 1;
+  }
   render();
 }
 
 // 点击切换
 cardEl.addEventListener('click', function(e) {
-  // 点击右侧下一张，左侧上一张，中间也可下一张
   const rect = cardEl.getBoundingClientRect();
   const x = e.clientX - rect.left;
   if (x < rect.width * 0.35) prev();
