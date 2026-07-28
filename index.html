@@ -11,24 +11,19 @@
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
 
-html {
-  height: 100%;
-  /* 阻止系统手势的滑动返回/前进 */
-  overscroll-behavior-x: none;
-}
-
-body {
-  height: 100%;
+html, body {
+  min-height: 100%;
   font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", serif;
   background: #faf9f7;
   color: #2c2c2e;
   -webkit-font-smoothing: antialiased;
-  /* 关键：阻止整体页面滚动，但允许卡片内部滚动 */
-  overflow: hidden;
-  position: fixed;
-  width: 100%;
-  /* 撑满安全区域 */
-  padding-top: env(safe-area-inset-top, 0px);
+  overscroll-behavior-x: none;
+}
+
+body {
+  /* 允许整个页面自然滚动，避免 flexbox 内部滚动失效 */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 :root {
@@ -42,25 +37,15 @@ body {
   --shadow: 0 12px 40px rgba(108, 99, 255, 0.08), 0 4px 12px rgba(0,0,0,0.04);
 }
 
-/* ============ 页面布局：用 flexbox 撑满 ============ */
-.page {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
-}
-
 /* ============ 顶部控制栏 ============ */
 .header {
-  flex-shrink: 0;
-  background: rgba(250,249,247,0.92);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  position: sticky; top: 0; z-index: 10;
+  background: rgba(250,249,247,0.95);
   border-bottom: 1px solid var(--border);
-  padding: 8px 16px 10px;
+  padding: 10px 16px 12px;
   transition: all 0.3s ease;
   overflow: hidden;
-  max-height: 200px;
+  max-height: 220px;
 }
 .header.collapsed {
   max-height: 0;
@@ -70,49 +55,46 @@ body {
   opacity: 0;
 }
 .header h1 {
-  font-size:16px; font-weight:600; margin-bottom:8px;
+  font-size:16px; font-weight:600; margin-bottom:10px;
   font-family: -apple-system, "PingFang SC", sans-serif;
   letter-spacing: 0.5px;
   display: flex; align-items: center; justify-content: space-between;
 }
 .header h1 .toggle-btn {
-  font-size: 14px; font-weight: 400;
+  font-size: 13px; font-weight: 400;
   color: var(--accent); cursor: pointer;
   background: none; border: none;
   font-family: -apple-system, "PingFang SC", sans-serif;
 }
 .controls { display:flex; gap:8px; align-items:center; }
 .controls input[type=text] {
-  flex:1; padding:8px 14px; font-size:14px;
+  flex:1; padding:9px 14px; font-size:14px;
   border:1px solid var(--border); border-radius:12px;
   background:var(--card-bg); outline:none;
   font-family: -apple-system, "PingFang SC", sans-serif;
   min-width: 0;
 }
 .controls select {
-  padding:8px 12px; font-size:13px; max-width:42%;
+  padding:9px 12px; font-size:13px; max-width:42%;
   border:1px solid var(--border); border-radius:12px;
   background:var(--card-bg); color:var(--text);
   font-family: -apple-system, "PingFang SC", sans-serif;
   flex-shrink: 0;
 }
 
-/* ============ 卡片区域：flex:1 撑满剩余空间 ============ */
+/* ============ 卡片舞台 ============ */
 .stage {
-  flex: 1;
+  min-height: calc(100vh - 200px);
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
   justify-content: center;
-  padding: 12px 12px;
-  min-height: 0; /* 关键：允许 flex 子项缩小 */
-  overflow: hidden;
+  padding: 12px 12px 16px;
 }
 
 .card {
   width: 100%;
   max-width: 580px;
-  /* 用 flex:1 撑满高度，而不是固定高度 */
-  flex: 1;
+  min-height: calc(100vh - 240px);
   background: var(--card-bg);
   border-radius: 24px;
   box-shadow: var(--shadow);
@@ -126,54 +108,41 @@ body {
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
-  overflow: hidden;
   transition: transform 0.15s ease, opacity 0.2s ease;
 }
 .card:active { transform: scale(0.98); }
 
 .card-book {
-  flex-shrink: 0;
   font-size: 13px; color: var(--accent);
   font-weight: 500;
   font-family: -apple-system, "PingFang SC", sans-serif;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
   width: 100%;
 }
 
-/* 卡片正文：flex:1 占据中间空间，可滚动 */
 .card-text {
-  flex: 1;
   font-size: clamp(16px, 4.2vw, 24px);
   line-height: 1.75;
   color: var(--text);
   font-weight: 400;
   width: 100%;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
   letter-spacing: 0.3px;
   padding: 0 4px;
-  /* 关键：让文字区域可滚动但不会撑爆卡片 */
-  min-height: 0;
   word-break: break-word;
 }
-.card-text::-webkit-scrollbar { width: 3px; }
-.card-text::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-.card-text::-webkit-scrollbar-track { background: transparent; }
 
 .card-chapter {
-  flex-shrink: 0;
   font-size: 12px; color: var(--text-secondary);
   font-family: -apple-system, "PingFang SC", sans-serif;
-  margin-top: 16px;
+  margin-top: 18px;
   width: 100%;
 }
 
 .card-hint {
-  flex-shrink: 0;
   font-size: 10px; color: #d1d1d6;
   font-family: -apple-system, sans-serif;
   letter-spacing: 1px;
-  margin-top: 8px;
+  margin-top: 12px;
 }
 
 .empty {
@@ -182,17 +151,54 @@ body {
   padding: 40px;
 }
 
+/* ============ 左右翻页按钮 ============ */
+.nav-btns {
+  position: sticky; bottom: env(safe-area-inset-bottom, 0px); z-index: 9;
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px 12px;
+  gap: 12px;
+  background: linear-gradient(to top, rgba(250,249,247,1) 0%, rgba(250,249,247,0.92) 70%, rgba(250,249,247,0) 100%);
+}
+.nav-btn {
+  flex: 1;
+  padding: 11px 0;
+  border: none;
+  border-radius: 14px;
+  background: var(--card-bg);
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 500;
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.nav-btn:active { transform: scale(0.95); background: var(--accent); color: white; }
+
+/* ============ 进度条 ============ */
+.progress {
+  position: sticky; bottom: 0; z-index: 8;
+  height: 3px; background: rgba(0,0,0,0.04);
+}
+.progress-bar {
+  height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-light));
+  width: 0%; transition: width 0.3s ease;
+  border-radius: 0 3px 3px 0;
+}
+
 /* ============ 底部跳转栏 ============ */
 .jump-bar {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center; gap: 6px;
-  padding: 8px 16px;
-  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
-  background: rgba(250,249,247,0.92);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  padding: 10px 16px 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  background: rgba(250,249,247,0.95);
   border-top: 1px solid var(--border);
   font-size: 13px; color: var(--text-secondary);
   font-family: -apple-system, "PingFang SC", sans-serif;
@@ -219,94 +225,52 @@ body {
   cursor: pointer; font-weight: 500;
 }
 .jump-bar button:active { background: var(--accent-light); }
-
-/* ============ 左右翻页按钮（替代滑动手势的可靠方案）============ */
-.nav-btns {
-  flex-shrink: 0;
-  display: flex;
-  justify-content: space-between;
-  padding: 0 16px 4px;
-  gap: 16px;
-}
-.nav-btn {
-  flex: 1;
-  max-width: 120px;
-  padding: 10px 0;
-  border: none;
-  border-radius: 14px;
-  background: var(--card-bg);
-  color: var(--accent);
-  font-size: 15px;
-  font-weight: 500;
-  font-family: -apple-system, "PingFang SC", sans-serif;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-.nav-btn:active { transform: scale(0.95); background: var(--accent); color: white; }
-
-/* ============ 进度条 ============ */
-.progress {
-  flex-shrink: 0;
-  height: 3px; background: rgba(0,0,0,0.04);
-}
-.progress-bar {
-  height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-light));
-  width: 0%; transition: width 0.3s ease;
-  border-radius: 0 3px 3px 0;
-}
 </style>
 </head>
 <body>
-<div class="page">
 
-  <!-- 顶部控制栏 -->
-  <div class="header" id="header">
-    <h1>
-      <span>📚 划线卡片</span>
-      <button class="toggle-btn" id="toggleHeader">收起 ▲</button>
-    </h1>
-    <div class="controls">
-      <input type="text" id="search" placeholder="搜索划线内容...">
-      <select id="bookFilter">
-        <option value="">全部书籍</option>
-        <option value="13854dc3-fb52-4601-b52f-b539946d7ea0_读书摘记：写作、创造、自我">13854dc3-fb52-4601-b52f-b539946d7ea0_读书摘记：写作、创造、自我 (55)</option><option value="13a6721682bac0a2ae740288a28720fb.pdf">13a6721682bac0a2ae740288a28720fb.pdf (94)</option><option value="1731664917463793">1731664917463793 (5)</option><option value="2022版义务教育英语课程标准(Word)全文">2022版义务教育英语课程标准(Word)全文 (10)</option><option value="2051-6673-1-9">2051-6673-1-9 (1)</option><option value="30天学会创意 唤醒与生俱来的创造力潜能 (（美）崔拉_ (z-library.sk, 1lib.sk, z-lib.sk)">30天学会创意 唤醒与生俱来的创造力潜能 (（美）崔拉_ (z-library.sk, 1lib.sk, z-lib.sk) (26)</option><option value="@森里write flomo笔记">@森里write flomo笔记 (130)</option><option value="ADHD共患边缘型人格障碍患者冲动性特征及其与情绪调节策略的关系-常卫利">ADHD共患边缘型人格障碍患者冲动性特征及其与情绪调节策略的关系-常卫利 (3)</option><option value="AIGC：智能创作时代">AIGC：智能创作时代 (1)</option><option value="Accidental Genius">Accidental Genius (1)</option><option value="Austin Kleon">Austin Kleon (10)</option><option value="Autoethnography (Understanding Qualitative Research)">Autoethnography (Understanding Qualitative Research) (6)</option><option value="BillionWrites">BillionWrites (9)</option><option value="Borderline_personality_disorder">Borderline_personality_disorder (5)</option><option value="Company of One">Company of One (2)</option><option value="Complex PTSD and borderline personality disorder">Complex PTSD and borderline personality disorder (8)</option><option value="Creative Analysis: Art, Creativity and Clinical Process">Creative Analysis: Art, Creativity and Clinical Process (64)</option><option value="Die Technik wissenschaftlic_ (Z-Library)">Die Technik wissenschaftlic_ (Z-Library) (5)</option><option value="Elements (Robert Fritz) ">Elements (Robert Fritz)  (14)</option><option value="Evolutionary and Neurocognitive Approaches to Aesthetics, Creativity, and the Arts">Evolutionary and Neurocognitive Approaches to Aesthetics, Creativity, and the Arts (6)</option><option value="Excerpt.pdf">Excerpt.pdf (7)</option><option value="Explaining Creativity">Explaining Creativity (28)</option><option value="Finding Meaning in the Second Half of Life: How to Finally, Really Grow Up">Finding Meaning in the Second Half of Life: How to Finally, Really Grow Up (11)</option><option value="Fluent Forever How to Learn Any Language Fast and Never Forget it (Gabriel Wyner) (Z-Library).pdf">Fluent Forever How to Learn Any Language Fast and Never Forget it (Gabriel Wyner) (Z-Library).pdf (1)</option><option value="Fluent in 3 Months How Anyone at Any Age Can Learn to Speak Any Language from Anywhere in the World (Lewis, Benny) (Z-Library).pdf">Fluent in 3 Months How Anyone at Any Age Can Learn to Speak Any Language from Anywhere in the World (Lewis, Benny) (Z-Library).pdf (8)</option><option value="Getting divorced from mother &amp; dad the discoveries of the Fischer-Hoffman process">Getting divorced from mother &amp; dad the discoveries of the Fischer-Hoffman process (12)</option><option value="Guntrip-H.-1968.-Schizoid-phenomena-object-relations-and-the-self (1).pdf">Guntrip-H.-1968.-Schizoid-phenomena-object-relations-and-the-self (1).pdf (21)</option><option value="Inner Work">Inner Work (33)</option><option value="Intelligence, Information,_ (Z-Library)">Intelligence, Information,_ (Z-Library) (3)</option><option value="Introvert Power Why Your In_ (Z-Library).epub">Introvert Power Why Your In_ (Z-Library).epub (29)</option><option value="I型人格：一本书全方位解析MBTI中的内倾型人格">I型人格：一本书全方位解析MBTI中的内倾型人格 (24)</option><option value="KO！再见，边缘型人格！">KO！再见，边缘型人格！ (35)</option><option value="Letter To My Imagination">Letter To My Imagination (4)</option><option value="Living Between Worlds Findi_ (Z-Library).epub">Living Between Worlds Findi_ (Z-Library).epub (11)</option><option value="MBTI：潜能开发和人性攻略">MBTI：潜能开发和人性攻略 (1)</option><option value="Make It Stick">Make It Stick (7)</option><option value="On Becoming a Person">On Becoming a Person (38)</option><option value="Orbiting the giant hairball : a corporate fool&#x27;s guide to surviving with grace">Orbiting the giant hairball : a corporate fool&#x27;s guide to surviving with grace (2)</option><option value="Parallel Thinking">Parallel Thinking (1)</option><option value="Power of Your Other Hand">Power of Your Other Hand (2)</option><option value="Scattered Minds The Origins_ (Z-Library)">Scattered Minds The Origins_ (Z-Library) (208)</option><option value="Scattered-Minds_-A-New-Look-At-The-Origins-And-Healing-Of-Attention-Deficit-Disorder-Notebook-2">Scattered-Minds_-A-New-Look-At-The-Origins-And-Healing-Of-Attention-Deficit-Disorder-Notebook-2 (55)</option><option value="Schizoid Phenomena, Object-Relations and the Self">Schizoid Phenomena, Object-Relations and the Self (13)</option><option value="Scrivener 3 User Manual">Scrivener 3 User Manual (5)</option><option value="Simplicity">Simplicity (6)</option><option value="Six Thinking Hats">Six Thinking Hats (1)</option><option value="Stepping-back-to-move-forward">Stepping-back-to-move-forward (3)</option><option value="Surfaces and Essences: Analogy as the Fuel and Fire of Thinking">Surfaces and Essences: Analogy as the Fuel and Fire of Thinking (3)</option><option value="The Creative Habit">The Creative Habit (14)</option><option value="The Creative Process">The Creative Process (6)</option><option value="The Daily Artist&#x27;s Way: 366 Meditations for Creative Living">The Daily Artist&#x27;s Way: 366 Meditations for Creative Living (15)</option><option value="The Dark Side of Creativity: Original Thinkers Can Be More Dishonest">The Dark Side of Creativity: Original Thinkers Can Be More Dishonest (4)</option><option value="The Drama of the Gifted Child">The Drama of the Gifted Child (2)</option><option value="The Emotional Brain">The Emotional Brain (7)</option><option value="The Mechanism of Mind (Edwa_ (Z-Library)">The Mechanism of Mind (Edwa_ (Z-Library) (1)</option><option value="The Minds Best Work (David_ (z-library.sk, 1lib.sk, z-lib.sk)">The Minds Best Work (David_ (z-library.sk, 1lib.sk, z-lib.sk) (1)</option><option value="The Timeless Way of Buildin_ (Z-Library)">The Timeless Way of Buildin_ (Z-Library) (25)</option><option value="The_Economist_USA_-_April_27_2024.pdf">The_Economist_USA_-_April_27_2024.pdf (1)</option><option value="Therapeutic Potential for C_ (Z-Library).pdf">Therapeutic Potential for C_ (Z-Library).pdf (26)</option><option value="Thinking On Paper (V. A. Ho_ (Z-Library)">Thinking On Paper (V. A. Ho_ (Z-Library) (5)</option><option value="Thinking in Pictures">Thinking in Pictures (10)</option><option value="Where Good Ideas Come From">Where Good Ideas Come From (7)</option><option value="Why So Stupid (Edward De Bono) (Z-Library)">Why So Stupid (Edward De Bono) (Z-Library) (1)</option><option value="WriteTech">WriteTech (18)</option><option value="Writing Without Teachers (P_ (Z-Library).pdf">Writing Without Teachers (P_ (Z-Library).pdf (63)</option><option value="Writing to Heal A guided jo_ (Z-Library)">Writing to Heal A guided jo_ (Z-Library) (19)</option><option value="Writing to Heal the Soul">Writing to Heal the Soul (26)</option><option value="Writing with Power Techniqu_ (Z-Library).epub">Writing with Power Techniqu_ (Z-Library).epub (37)</option><option value="Your Life as Art">Your Life as Art (48)</option><option value="article_1719397180">article_1719397180 (1)</option><option value="ed233342.tif.pdf">ed233342.tif.pdf (5)</option><option value="filter-1">filter-1 (10)</option><option value="how to build st">how to build st (13)</option><option value="temp">temp (2)</option><option value="temp.pdf">temp.pdf (3)</option><option value="“嗑CP”、玩设定的女频新时代——2018-19年中国网络文学女频综述-肖映萱">“嗑CP”、玩设定的女频新时代——2018-19年中国网络文学女频综述-肖映萱 (1)</option><option value="《一人创作系统实操指南｜Write to Live》.pdf">《一人创作系统实操指南｜Write to Live》.pdf (18)</option><option value="《顶级创作者之路》_V1.0_仅内部参考.pdf">《顶级创作者之路》_V1.0_仅内部参考.pdf (1)</option><option value="一个孤独漫步者的遐想">一个孤独漫步者的遐想 (4)</option><option value="一个心理咨询师的个人账号">一个心理咨询师的个人账号 (2)</option><option value="一分钟百万富翁 ( etc.) (z-library.sk, 1lib.sk, z-lib.sk)">一分钟百万富翁 ( etc.) (z-library.sk, 1lib.sk, z-lib.sk) (51)</option><option value="一只鸟接着一只鸟：关于写作与人生的建议">一只鸟接着一只鸟：关于写作与人生的建议 (1)</option><option value="一定要告诉孩子的18堂商业思维课">一定要告诉孩子的18堂商业思维课 (1)</option><option value="三个存钱罐：金融学教授的儿童财商启蒙课">三个存钱罐：金融学教授的儿童财商启蒙课 (2)</option><option value="三国演义（人民文学版）">三国演义（人民文学版） (2)</option><option value="不原谅也没关系">不原谅也没关系 (191)</option><option value="不安的时候，坐下来写 (娜塔莉·戈德堡 (Natali_ (Z-Library)">不安的时候，坐下来写 (娜塔莉·戈德堡 (Natali_ (Z-Library) (6)</option><option value="不愿活下去的人：关于生死的特别报道">不愿活下去的人：关于生死的特别报道 (1)</option><option value="与孤独共处：喧嚣世界中的内心成长">与孤独共处：喧嚣世界中的内心成长 (19)</option><option value="个人品牌打造：从0到1低成本创业">个人品牌打造：从0到1低成本创业 (1)</option><option value="中国文化的深层结构">中国文化的深层结构 (4)</option><option value="中国通史（套装共上、下2册）">中国通史（套装共上、下2册） (10)</option><option value="中年之路：人格的第二次成型">中年之路：人格的第二次成型 (63)</option><option value="中年女性网络言情小说阅读研究——基于番茄小说APP用户-李琬钰">中年女性网络言情小说阅读研究——基于番茄小说APP用户-李琬钰 (7)</option><option value="为何家会伤人（百万畅销纪念版）">为何家会伤人（百万畅销纪念版） (404)</option><option value="为自己思考:终身成长的底层逻辑">为自己思考:终身成长的底层逻辑 (39)</option><option value="乌合之众（果麦经典）">乌合之众（果麦经典） (35)</option><option value="也许你该找个人聊聊">也许你该找个人聊聊 (4)</option><option value="习惯逃避：你在害怕什么（回避型人格自救手册。拖延、讨好、自卑、社恐的背后，不过是一颗习惯逃避的灵魂。）">习惯逃避：你在害怕什么（回避型人格自救手册。拖延、讨好、自卑、社恐的背后，不过是一颗习惯逃避的灵魂。） (321)</option><option value="乡土中国">乡土中国 (37)</option><option value="书写自愈力">书写自愈力 (45)</option><option value="书籍的世界">书籍的世界 (4)</option><option value="亲密关系（第6版）">亲密关系（第6版） (46)</option><option value="人性的弱点（果麦经典）">人性的弱点（果麦经典） (70)</option><option value="人都是要死的">人都是要死的 (7)</option><option value="人间失格（读客三个圈经典文库）">人间失格（读客三个圈经典文库） (10)</option><option value="人间草木：汪曾祺散文精选集">人间草木：汪曾祺散文精选集 (1)</option><option value="人际界限">人际界限 (15)</option><option value="仪式的力量">仪式的力量 (10)</option><option value="价值心法">价值心法 (17)</option><option value="价值：我对投资的思考 (张磊) (Z-Library)">价值：我对投资的思考 (张磊) (Z-Library) (4)</option><option value="优秀的绵羊">优秀的绵羊 (101)</option><option value="会赚钱的人想的不一样">会赚钱的人想的不一样 (2)</option><option value="传习录">传习录 (21)</option><option value="低学历的五大师 (张建安著, Zhang Jianan_ (z-library.sk, 1lib.sk, z-lib.sk)">低学历的五大师 (张建安著, Zhang Jianan_ (z-library.sk, 1lib.sk, z-lib.sk) (1)</option><option value="体验的世界：精神分析主体间性理论及其应用">体验的世界：精神分析主体间性理论及其应用 (2)</option><option value="作家的童年经验及其对创作的影响_童庆炳">作家的童年经验及其对创作的影响_童庆炳 (3)</option><option value="作文杂谈（2021版）">作文杂谈（2021版） (1)</option><option value="你一定爱读的极简欧洲史（增订纪念版)">你一定爱读的极简欧洲史（增订纪念版) (2)</option><option value="你不可不知的法律常识">你不可不知的法律常识 (1)</option><option value="你当像鸟飞往你的山">你当像鸟飞往你的山 (2)</option><option value="你想过怎样的一生？ 从0 到100 岁，该学会的人生大事，都在这些生活的小事里了 (海克·法勒 文 瓦莱里奥·维达里 图) (Z-Library).pdf">你想过怎样的一生？ 从0 到100 岁，该学会的人生大事，都在这些生活的小事里了 (海克·法勒 文 瓦莱里奥·维达里 图) (Z-Library).pdf (5)</option><option value="你的敏感，就是你的天赋">你的敏感，就是你的天赋 (48)</option><option value="你经历了什么？：关于创伤、疗愈和复原力的对话">你经历了什么？：关于创伤、疗愈和复原力的对话 (43)</option><option value="傲慢与偏见">傲慢与偏见 (4)</option><option value="儿童注意缺陷多动障碍(ADHD)的“冷”“热”执行功能_张微">儿童注意缺陷多动障碍(ADHD)的“冷”“热”执行功能_张微 (6)</option><option value="允许爱情消失">允许爱情消失 (127)</option><option value="全面深化改革与中国经济新发展">全面深化改革与中国经济新发展 (2)</option><option value="关系的重建【豆瓣评分8.9分，风靡世界、长踞排行榜前列的高评分作品，改变无数读者情感命运！知名媒体、作者、教授、大咖强烈推荐！诺贝尔奖生理学或医学奖得主、美国精神分析协会主 席共同推荐！每一份感情，都可以被经营成你想要的样子！】">关系的重建【豆瓣评分8.9分，风靡世界、长踞排行榜前列的高评分作品，改变无数读者情感命运！知名媒体、作者、教授、大咖强烈推荐！诺贝尔奖生理学或医学奖得主、美国精神分析协会主 席共同推荐！每一份感情，都可以被经营成你想要的样子！】 (43)</option><option value="具身心智：认知科学和人类经验 ([智] F.瓦雷拉，[_ (Z-Library)">具身心智：认知科学和人类经验 ([智] F.瓦雷拉，[_ (Z-Library) (1)</option><option value="内向者优势">内向者优势 (10)</option><option value="内在的宇宙">内在的宇宙 (2)</option><option value="内在觉醒：关于联结、疗愈与提升复原力">内在觉醒：关于联结、疗愈与提升复原力 (55)</option><option value="内容即品牌：长期主义者的内容创作方法论">内容即品牌：长期主义者的内容创作方法论 (81)</option><option value="内容即未来：数字产品规划与建模">内容即未来：数字产品规划与建模 (5)</option><option value="内容引爆增长：建立竞争优势的内容营销方法论">内容引爆增长：建立竞争优势的内容营销方法论 (16)</option><option value="再活一次——用写作来调心">再活一次——用写作来调心 (2)</option><option value="写下来，痛苦就会过去">写下来，痛苦就会过去 (2)</option><option value="写作与生活（克拉丽丝·李斯佩克朵作品集）">写作与生活（克拉丽丝·李斯佩克朵作品集） (3)</option><option value="写作库2（未处理）">写作库2（未处理） (165)</option><option value="写作是门手艺">写作是门手艺 (81)</option><option value="写作的禅机">写作的禅机 (1)</option><option value="写作脑科学：如何写出打动人心的故事">写作脑科学：如何写出打动人心的故事 (5)</option><option value="写出我心：普通人如何通过写作表达自己">写出我心：普通人如何通过写作表达自己 (57)</option><option value="写给分心者的生活指南">写给分心者的生活指南 (8)</option><option value="分类思维：不确定情境中合理决策的科学与艺术">分类思维：不确定情境中合理决策的科学与艺术 (3)</option><option value="分裂的自我">分裂的自我 (7)</option><option value="创伤与复原">创伤与复原 (93)</option><option value="创伤之前我是谁：找回内心强大的自我">创伤之前我是谁：找回内心强大的自我 (3)</option><option value="创作者">创作者 (57)</option><option value="创意心理学 唤醒与生俱来的创造力潜能 (（美）罗伯特._ (z-library.sk, 1lib.sk, z-lib.sk)">创意心理学 唤醒与生俱来的创造力潜能 (（美）罗伯特._ (z-library.sk, 1lib.sk, z-lib.sk) (11)</option><option value="创意无限 (（美）罗伯特·弗兰兹（Robert Fritz）著；杨颖译, (美) 弗兰兹, R).pdf">创意无限 (（美）罗伯特·弗兰兹（Robert Fritz）著；杨颖译, (美) 弗兰兹, R).pdf (30)</option><option value="创意的生成 (詹姆斯.韦伯.杨) (Z-Library).pdf">创意的生成 (詹姆斯.韦伯.杨) (Z-Library).pdf (53)</option><option value="创意行为：存在即答案">创意行为：存在即答案 (12)</option><option value="创造性思维 (（德）韦特海默著；林宗基译) (z-library.sk, 1lib.sk, z-lib.sk)">创造性思维 (（德）韦特海默著；林宗基译) (z-library.sk, 1lib.sk, z-lib.sk) (2)</option><option value="创造性才能 它们的性质、用途与培养 their nat_ (Z-Library)">创造性才能 它们的性质、用途与培养 their nat_ (Z-Library) (1)</option><option value="创造性：人类创新的科学 第2版 (R. Keith S_ (Z-Library)">创造性：人类创新的科学 第2版 (R. Keith S_ (Z-Library) (10)</option><option value="刻意练习：如何从新手到大师">刻意练习：如何从新手到大师 (15)</option><option value="动机与人格（马斯洛心理学经典译丛）">动机与人格（马斯洛心理学经典译丛） (12)</option><option value="包法利夫人">包法利夫人 (1)</option><option value="十万个为什么：心理学">十万个为什么：心理学 (8)</option><option value="半小时漫画宇宙大爆炸">半小时漫画宇宙大爆炸 (2)</option><option value="半小时漫画经济学2：金融危机篇">半小时漫画经济学2：金融危机篇 (1)</option><option value="华氏451（全新特别版）">华氏451（全新特别版） (4)</option><option value="博尔赫斯，口述">博尔赫斯，口述 (4)</option><option value="卡耐基说话技巧与人际交往">卡耐基说话技巧与人际交往 (37)</option><option value="压岁钱的游戏：一位投资人爸爸写给孩子的9堂财商课">压岁钱的游戏：一位投资人爸爸写给孩子的9堂财商课 (41)</option><option value="厌女（增订本）">厌女（增订本） (1)</option><option value="厌女：日本的女性嫌恶(重制版)">厌女：日本的女性嫌恶(重制版) (111)</option><option value="原来你怪可爱的（和情绪小怪物一起喜欢并善待自己）">原来你怪可爱的（和情绪小怪物一起喜欢并善待自己） (2)</option><option value="原生家庭的羁绊：用心理学改写人生脚本">原生家庭的羁绊：用心理学改写人生脚本 (225)</option><option value="原生家庭：如何修补自己的性格缺陷">原生家庭：如何修补自己的性格缺陷 (273)</option><option value="去当你想当的任何人吧">去当你想当的任何人吧 (9)</option><option value="受戒：汪曾祺小说精选（读客三个圈经典文库）">受戒：汪曾祺小说精选（读客三个圈经典文库） (4)</option><option value="变形记：中短篇小说集（卡夫卡小说全集）">变形记：中短篇小说集（卡夫卡小说全集） (1)</option><option value="史蒂夫·乔布斯传（修订版）">史蒂夫·乔布斯传（修订版） (9)</option><option value="叶芝：真人与假面">叶芝：真人与假面 (10)</option><option value="向内生长：唤醒你的内在能量">向内生长：唤醒你的内在能量 (2)</option><option value="哲学家们都干了些什么？ （修订版）">哲学家们都干了些什么？ （修订版） (9)</option><option value="哲学研究">哲学研究 (2)</option><option value="唤醒创作力：写给被“卡”住的创作者">唤醒创作力：写给被“卡”住的创作者 (154)</option><option value="唤醒大脑：神经可塑性如何帮助大脑自我疗愈">唤醒大脑：神经可塑性如何帮助大脑自我疗愈 (10)</option><option value="回忆、梦、思考：荣格自传（Loft）">回忆、梦、思考：荣格自传（Loft） (5)</option><option value="在轮下">在轮下 (2)</option><option value="地下室手记（果麦经典）">地下室手记（果麦经典） (14)</option><option value="基督山伯爵">基督山伯爵 (3)</option><option value="基础教育课程">基础教育课程 (23)</option><option value="堆肥——未分类">堆肥——未分类 (142)</option><option value="复利效应">复利效应 (1)</option><option value="复旦名师陈果：人生哲学课（共2册）">复旦名师陈果：人生哲学课（共2册） (2)</option><option value="复杂（第一推动丛书·综合系列）">复杂（第一推动丛书·综合系列） (1)</option><option value="外研社K12">外研社K12 (6)</option><option value="大众文化的女性主义指南">大众文化的女性主义指南 (1)</option><option value="大师教我学知识：阅读与写作">大师教我学知识：阅读与写作 (1)</option><option value="大话中国艺术史">大话中国艺术史 (1)</option><option value="大道无形：段永平">大道无形：段永平 (7)</option><option value="天生不同：人格类型识别和潜能开发（MBTI开山之作）">天生不同：人格类型识别和潜能开发（MBTI开山之作） (14)</option><option value="天资差异">天资差异 (54)</option><option value="失控">失控 (6)</option><option value="失落的致富经典">失落的致富经典 (104)</option><option value="奇想之年">奇想之年 (7)</option><option value="奥义书（精装）">奥义书（精装） (1)</option><option value="女性的英雄之旅">女性的英雄之旅 (6)</option><option value="好好告别：世界葬礼观察手记">好好告别：世界葬礼观察手记 (1)</option><option value="好好说话2：简单有效的高情商沟通术">好好说话2：简单有效的高情商沟通术 (136)</option><option value="如何了解一个人">如何了解一个人 (8)</option><option value="如何形成清晰的观点">如何形成清晰的观点 (2)</option><option value="如何快速了解一个行业">如何快速了解一个行业 (69)</option><option value="如何讓馬飛起來">如何讓馬飛起來 (3)</option><option value="如何阅读一本书 ([美]莫提默·J·艾德勒 查尔斯·范_ (Z-Library).epub">如何阅读一本书 ([美]莫提默·J·艾德勒 查尔斯·范_ (Z-Library).epub (2)</option><option value="娜拉走后怎样（轻经典）">娜拉走后怎样（轻经典） (1)</option><option value="娱乐至死">娱乐至死 (77)</option><option value="字节跳动：从0到1的秘密">字节跳动：从0到1的秘密 (1)</option><option value="存在主义心理治疗">存在主义心理治疗 (21)</option><option value="宋词三百首（彩图精装）">宋词三百首（彩图精装） (1)</option><option value="定位：争夺用户心智的战争（经典重译版）">定位：争夺用户心智的战争（经典重译版） (3)</option><option value="家里，容不下暴力：40位家暴当事人的创伤与疗愈">家里，容不下暴力：40位家暴当事人的创伤与疗愈 (15)</option><option value="富兰克林自传">富兰克林自传 (7)</option><option value="富爸爸商学院+富爸爸致富需要做的6件事+富爸爸穷爸爸+富爸爸提高你的财商+富爸爸财务自由之路(修订版)(套装共5册)">富爸爸商学院+富爸爸致富需要做的6件事+富爸爸穷爸爸+富爸爸提高你的财商+富爸爸财务自由之路(修订版)(套装共5册) (151)</option><option value="对于自己，你还是个陌生人">对于自己，你还是个陌生人 (14)</option><option value="对财富说是">对财富说是 (83)</option><option value="小学生心理学漫画1：社交力">小学生心理学漫画1：社交力 (3)</option><option value="小狗钱钱（套装全2册）">小狗钱钱（套装全2册） (47)</option><option value="小逻辑">小逻辑 (19)</option><option value="少有人走的路(1-8全套)">少有人走的路(1-8全套) (102)</option><option value="巨人的工具">巨人的工具 (40)</option><option value="巨婴国: 国内心理学家系统透视中国国民性">巨婴国: 国内心理学家系统透视中国国民性 (124)</option><option value="巴比伦最富有的人">巴比伦最富有的人 (10)</option><option value="幸福之路（果麦经典）">幸福之路（果麦经典） (6)</option><option value="幼儿英语分级阅读：入门级">幼儿英语分级阅读：入门级 (2)</option><option value="庞颖：当父母的爱带着条件，人的配得感就会打折（轻心理）">庞颖：当父母的爱带着条件，人的配得感就会打折（轻心理） (2)</option><option value="强势">强势 (4)</option><option value="当代教育心理学（第3版） (陈琦，刘儒德) (z-library.sk, 1lib.sk, z-lib.sk)">当代教育心理学（第3版） (陈琦，刘儒德) (z-library.sk, 1lib.sk, z-lib.sk) (52)</option><option value="当大脑坠入爱河">当大脑坠入爱河 (8)</option><option value="当大脑陷入孤独">当大脑陷入孤独 (6)</option><option value="当我遇见一个人：母婴关系决定孩子的一切关系">当我遇见一个人：母婴关系决定孩子的一切关系 (1)</option><option value="影响力（全新升级版）">影响力（全新升级版） (9)</option><option value="德米安">德米安 (20)</option><option value="心智探奇：人类心智的起源与进化">心智探奇：人类心智的起源与进化 (2)</option><option value="心流+发现心流（套装全2册）">心流+发现心流（套装全2册） (28)</option><option value="心流：最优体验心理学">心流：最优体验心理学 (12)</option><option value="心灵书写：让写作通往疗愈">心灵书写：让写作通往疗愈 (13)</option><option value="心理学与炼金术（荣格精选集）">心理学与炼金术（荣格精选集） (2)</option><option value="心理类型">心理类型 (2)</option><option value="怎样写作">怎样写作 (11)</option><option value="怎样读书">怎样读书 (2)</option><option value="思考致富">思考致富 (44)</option><option value="思考，快与慢">思考，快与慢 (13)</option><option value="思考，快与慢（第二版）">思考，快与慢（第二版） (36)</option><option value="性别战争">性别战争 (1)</option><option value="性别打结">性别打结 (11)</option><option value="性学观止：插图第6版（上下册）">性学观止：插图第6版（上下册） (4)</option><option value="悲惨世界（全册）">悲惨世界（全册） (1)</option><option value="情感勒索">情感勒索 (20)</option><option value="情感无能：那些渴望爱却无法真正去爱的人">情感无能：那些渴望爱却无法真正去爱的人 (80)</option><option value="情绪">情绪 (16)</option><option value="成为母亲的选择">成为母亲的选择 (4)</option><option value="成为母亲的选择（“我爱孩子，但我后悔当妈妈。”以色列社会学家奥娜·多纳特话题之作，被翻译为近十种语言，在以色列、德国等地引发热议。初次聚焦“后悔生育”的话题，采访二十三位后悔生育的母亲，展现女性生育前后的情感历程。）">成为母亲的选择（“我爱孩子，但我后悔当妈妈。”以色列社会学家奥娜·多纳特话题之作，被翻译为近十种语言，在以色列、德国等地引发热议。初次聚焦“后悔生育”的话题，采访二十三位后悔生育的母亲，展现女性生育前后的情感历程。） (213)</option><option value="我与地坛">我与地坛 (15)</option><option value="我为什么要写作（小经典系列）">我为什么要写作（小经典系列） (1)</option><option value="我们为什么不爱了：走出亲密内耗">我们为什么不爱了：走出亲密内耗 (9)</option><option value="我们内心的冲突（果麦经典）">我们内心的冲突（果麦经典） (323)</option><option value="我们内心的崩裂：霍妮谈这个时代的基本焦虑与自我挣扎">我们内心的崩裂：霍妮谈这个时代的基本焦虑与自我挣扎 (12)</option><option value="我们如何正确思维">我们如何正确思维 (93)</option><option value="我们生活在巨大的差距里 (余华) (Z-Library).pdf">我们生活在巨大的差距里 (余华) (Z-Library).pdf (16)</option><option value="我在精神病院抗抑郁">我在精神病院抗抑郁 (2)</option><option value="我手写我心：如何通过写作成为更好的自己">我手写我心：如何通过写作成为更好的自己 (23)</option><option value="我才不想做家务（全网剖析隐形家务最彻底的一本书！）">我才不想做家务（全网剖析隐形家务最彻底的一本书！） (1)</option><option value="我的策展之道">我的策展之道 (1)</option><option value="我看见的世界：李飞飞自传">我看见的世界：李飞飞自传 (3)</option><option value="战争中没有女性（阿列克谢耶维奇作品）">战争中没有女性（阿列克谢耶维奇作品） (4)</option><option value="打造第二大脑">打造第二大脑 (80)</option><option value="把自己产品化：踏上发现真我的英雄之旅">把自己产品化：踏上发现真我的英雄之旅 (23)</option><option value="搞定：无压工作的艺术+提升工作与生活效率+平衡工作与生活的艺术（全集）">搞定：无压工作的艺术+提升工作与生活效率+平衡工作与生活的艺术（全集） (73)</option><option value="政府工作报告——2026年3月5日在第十四届全国人民代表大会第四次会议上">政府工作报告——2026年3月5日在第十四届全国人民代表大会第四次会议上 (1)</option><option value="数学觉醒：学会更清晰地思考">数学觉醒：学会更清晰地思考 (34)</option><option value="文化理论与大众文化导论（第七版）">文化理论与大众文化导论（第七版） (7)</option><option value="文化资本与社会炼金术：布尔迪厄访谈录 (皮埃尔·布迪厄) (Z-Library)">文化资本与社会炼金术：布尔迪厄访谈录 (皮埃尔·布迪厄) (Z-Library) (1)</option><option value="文心：别开生面的语文课（2021版）">文心：别开生面的语文课（2021版） (1)</option><option value="文章作法：写好文章就这几步（2021版）">文章作法：写好文章就这几步（2021版） (1)</option><option value="文艺心理学教程 (童庆炳，程正民主编, Qingbin_ (z-library.sk, 1lib.sk, z-lib.sk)">文艺心理学教程 (童庆炳，程正民主编, Qingbin_ (z-library.sk, 1lib.sk, z-lib.sk) (13)</option><option value="斯坦福大学写作课">斯坦福大学写作课 (2)</option><option value="无尽与有限36岁当妈妈 (荞麦) (z-library.sk, 1lib.sk, z-lib.sk)">无尽与有限36岁当妈妈 (荞麦) (z-library.sk, 1lib.sk, z-lib.sk) (22)</option><option value="暮色将尽">暮色将尽 (1)</option><option value="更富有、更睿智、更快乐：世界顶尖投资者是如何在市场和生活中实现双赢的">更富有、更睿智、更快乐：世界顶尖投资者是如何在市场和生活中实现双赢的 (4)</option><option value="曾国藩传">曾国藩传 (1)</option><option value="曾国藩传（张宏杰全新增补版）">曾国藩传（张宏杰全新增补版） (19)</option><option value="最好的决定（知更鸟系列）">最好的决定（知更鸟系列） (1)</option><option value="最小阻力之路">最小阻力之路 (8)</option><option value="有趣的金钱">有趣的金钱 (18)</option><option value="有钱人和你想的不一样">有钱人和你想的不一样 (50)</option><option value="有钱人和你想的不一样.2">有钱人和你想的不一样.2 (2)</option><option value="枪炮、病菌与钢铁 : 人类社会的命运 (世纪人文系列丛书·开放人文)">枪炮、病菌与钢铁 : 人类社会的命运 (世纪人文系列丛书·开放人文) (1)</option><option value="梁永安：爱情这门课，你可别挂科！">梁永安：爱情这门课，你可别挂科！ (78)</option><option value="梵高手稿">梵高手稿 (6)</option><option value="樊登漫画《论语》">樊登漫画《论语》 (5)</option><option value="欢迎信：不止是写作，不止是游戏。">欢迎信：不止是写作，不止是游戏。 (2)</option><option value="毛泽东传：名著珍藏版（插图本）">毛泽东传：名著珍藏版（插图本） (41)</option><option value="沉默的大多数">沉默的大多数 (13)</option><option value="沟通的本质">沟通的本质 (60)</option><option value="治愈系心理学 孤独 回归自我 (（英）安东尼·斯托尔（_ (Z-Library).pdf">治愈系心理学 孤独 回归自我 (（英）安东尼·斯托尔（_ (Z-Library).pdf (94)</option><option value="波士顿咨询工作法：精准运用直觉">波士顿咨询工作法：精准运用直觉 (5)</option><option value="泰戈尔英汉双语诗集:飞鸟集">泰戈尔英汉双语诗集:飞鸟集 (19)</option><option value="洛克菲勒写给儿子的38封信">洛克菲勒写给儿子的38封信 (62)</option><option value="洛克菲勒给子女的一生忠告">洛克菲勒给子女的一生忠告 (23)</option><option value="津巴多普通心理学（第8版）">津巴多普通心理学（第8版） (1)</option><option value="活出生命的意义">活出生命的意义 (11)</option><option value="流行的真相：从 Labubu 到AI，人类为什么上瘾？（轻访谈）">流行的真相：从 Labubu 到AI，人类为什么上瘾？（轻访谈） (3)</option><option value="浮生取义——对华北某县自杀现象的文化解读">浮生取义——对华北某县自杀现象的文化解读 (10)</option><option value="海蒂（有声双语经典）">海蒂（有声双语经典） (1)</option><option value="深度关系">深度关系 (9)</option><option value="混乱：如何成为失控时代的掌控者">混乱：如何成为失控时代的掌控者 (3)</option><option value="清醒思考的策略">清醒思考的策略 (247)</option><option value="游戏与现实 ([英]温尼科特（D. W. Winnic_ (Z-Library).pdf">游戏与现实 ([英]温尼科特（D. W. Winnic_ (Z-Library).pdf (4)</option><option value="源氏物语">源氏物语 (1)</option><option value="漫画历史线：轻松学古文（套装共5册）">漫画历史线：轻松学古文（套装共5册） (2)</option><option value="热锅上的家庭：家庭问题背后的心理真相">热锅上的家庭：家庭问题背后的心理真相 (13)</option><option value="爱与依恋的力量">爱与依恋的力量 (88)</option><option value="爱弥儿">爱弥儿 (5)</option><option value="爱的艺术 (The Art of Loving) (艾·弗洛姆 (Eric Fromm)) (Z-Library).pdf">爱的艺术 (The Art of Loving) (艾·弗洛姆 (Eric Fromm)) (Z-Library).pdf (56)</option><option value="爱的艺术 (The Art of Loving) (艾·弗洛姆 (Eric Fromm)) (Z-Library).pdf爱的艺术 (The Art of Loving) (艾·弗洛姆 (Eric Fromm)) (Z-Library).pdf">爱的艺术 (The Art of Loving) (艾·弗洛姆 (Eric Fromm)) (Z-Library).pdf爱的艺术 (The Art of Loving) (艾·弗洛姆 (Eric Fromm)) (Z-Library).pdf (8)</option><option value="牛奶可乐经济学（全新升级版）">牛奶可乐经济学（全新升级版） (1)</option><option value="牡丹亭：绘本">牡丹亭：绘本 (3)</option><option value="玩赚自媒体：建号、引流、变现到IP打造">玩赚自媒体：建号、引流、变现到IP打造 (1)</option><option value="现代性背景下网络趣缘群体对自我认同的建构——以“同人女”群体以及耽美现象为例-吕品">现代性背景下网络趣缘群体对自我认同的建构——以“同人女”群体以及耽美现象为例-吕品 (6)</option><option value="理财就是理生活">理财就是理生活 (2)</option><option value="生活的意义">生活的意义 (3)</option><option value="用一年时间重生：如何从0到1开启个人事业">用一年时间重生：如何从0到1开启个人事业 (1)</option><option value="用写作重建自我">用写作重建自我 (79)</option><option value="用图像思考：与孤独症共生">用图像思考：与孤独症共生 (1)</option><option value="画家之眼：审美的十二要素（果麦经典）">画家之眼：审美的十二要素（果麦经典） (5)</option><option value="画给孩子的中国历史（精装彩绘本）">画给孩子的中国历史（精装彩绘本） (15)</option><option value="百万富翁快车道">百万富翁快车道 (88)</option><option value="直击本质：洞察事物底层逻辑的思考方法">直击本质：洞察事物底层逻辑的思考方法 (10)</option><option value="直视骄阳：征服死亡恐惧">直视骄阳：征服死亡恐惧 (24)</option><option value="真正拥有主体性的人，都付出过这7个代价（轻心理）">真正拥有主体性的人，都付出过这7个代价（轻心理） (1)</option><option value="知识炼金术：知识萃取和运营的艺术与实务">知识炼金术：知识萃取和运营的艺术与实务 (16)</option><option value="知识的边界">知识的边界 (6)</option><option value="研究是一门艺术">研究是一门艺术 (1)</option><option value="硅谷钢铁侠：埃隆·马斯克的冒险人生">硅谷钢铁侠：埃隆·马斯克的冒险人生 (15)</option><option value="社交恐惧症（给社交恐惧者的人格画像与深度剖析） (找回真我系列)">社交恐惧症（给社交恐惧者的人格画像与深度剖析） (找回真我系列) (38)</option><option value="社会心理学(第11版教育部高等学校心理学教学指导委员会推荐用书) (戴维·迈尔斯,David Myers,侯玉波,乐国安,张智勇) (Z-Library)">社会心理学(第11版教育部高等学校心理学教学指导委员会推荐用书) (戴维·迈尔斯,David Myers,侯玉波,乐国安,张智勇) (Z-Library) (17)</option><option value="社会性动物（第12版）">社会性动物（第12版） (868)</option><option value="神经症与人的成长：自我实现的挣扎">神经症与人的成长：自我实现的挣扎 (228)</option><option value="禅与摩托车维修艺术">禅与摩托车维修艺术 (3)</option><option value="穷查理宝典：查理·芒格智慧箴言录(elib.cc)">穷查理宝典：查理·芒格智慧箴言录(elib.cc) (109)</option><option value="穷查理宝典：查理·芒格智慧箴言录（全新增订本）">穷查理宝典：查理·芒格智慧箴言录（全新增订本） (36)</option><option value="空洞的心：成瘾的真相与疗愈">空洞的心：成瘾的真相与疗愈 (105)</option><option value="突围原生家庭：如何在过去的伤痛中重建自我">突围原生家庭：如何在过去的伤痛中重建自我 (12)</option><option value="童年创伤对研究生边缘型人格障碍症状形成的影响_应对方式和心理弹性的链式中介作用-王嘉慧">童年创伤对研究生边缘型人格障碍症状形成的影响_应对方式和心理弹性的链式中介作用-王嘉慧 (3)</option><option value="童年创伤对青少年情绪障碍患者学校适应的影响：边缘型人格特征与亲社会行为的链式中介作用-付浩">童年创伤对青少年情绪障碍患者学校适应的影响：边缘型人格特征与亲社会行为的链式中介作用-付浩 (1)</option><option value="童年期创伤与边缘型人格障碍-赵天宇">童年期创伤与边缘型人格障碍-赵天宇 (5)</option><option value="笔记的方法">笔记的方法 (35)</option><option value="第二性（合卷本） (西蒙娜·德·波伏瓦作品系列)">第二性（合卷本） (西蒙娜·德·波伏瓦作品系列) (22)</option><option value="第五项修炼：学习型组织的艺术与实践">第五项修炼：学习型组织的艺术与实践 (1)</option><option value="策展行知.pdf">策展行知.pdf (14)</option><option value="简单心理">简单心理 (7)</option><option value="类型与原型 (约翰毕比) (Z-Library).pdf">类型与原型 (约翰毕比) (Z-Library).pdf (29)</option><option value="精灵墨丘利">精灵墨丘利 (1)</option><option value="精神分析诊断——理解人格结构">精神分析诊断——理解人格结构 (9)</option><option value="系统之美(湛庐经典）">系统之美(湛庐经典） (15)</option><option value="系统之美（全新升级版）">系统之美（全新升级版） (96)</option><option value="素食者【2024诺贝尔文学奖得主】">素食者【2024诺贝尔文学奖得主】 (1)</option><option value="纳瓦尔宝典">纳瓦尔宝典 (171)</option><option value="纷乱的心灵：注意力缺陷障碍的缘起和疗愈">纷乱的心灵：注意力缺陷障碍的缘起和疗愈 (2)</option><option value="纸的声音">纸的声音 (14)</option><option value="经济发展理论（果麦经典）">经济发展理论（果麦经典） (1)</option><option value="结婚由我">结婚由我 (2)</option><option value="编剧的艺术">编剧的艺术 (1)</option><option value="美丽古典">美丽古典 (4)</option><option value="羞辱创伤：最日常却最椎心的痛">羞辱创伤：最日常却最椎心的痛 (32)</option><option value="聪明的投资者（第4版，注疏点评版）">聪明的投资者（第4版，注疏点评版） (8)</option><option value="胜者思维">胜者思维 (29)</option><option value="胡思乱想消除指南：用认知行为策略走出情绪困境">胡思乱想消除指南：用认知行为策略走出情绪困境 (10)</option><option value="脂粉帝国：网络言情小说与女性话语政治">脂粉帝国：网络言情小说与女性话语政治 (72)</option><option value="自体心理学导论 ([美] 彼得·A. 莱塞姆（Pete_ (Z-Library)">自体心理学导论 ([美] 彼得·A. 莱塞姆（Pete_ (Z-Library) (31)</option><option value="自体的重建">自体的重建 (50)</option><option value="自信的力量">自信的力量 (83)</option><option value="自学大全">自学大全 (2)</option><option value="自愈与成长：荣格的生命故事">自愈与成长：荣格的生命故事 (3)</option><option value="自我决定的孤独：难以建立亲密感的社会 ([德]伊丽莎白·冯·塔登) (Z-Library)">自我决定的孤独：难以建立亲密感的社会 ([德]伊丽莎白·冯·塔登) (Z-Library) (7)</option><option value="自我囚禁的人：完美主义的心理成因与自我松绑">自我囚禁的人：完美主义的心理成因与自我松绑 (7)</option><option value="自我救赎：战胜复杂性创伤的行动指南">自我救赎：战胜复杂性创伤的行动指南 (19)</option><option value="自我的探寻：弗洛伊德与精神分析的诞生">自我的探寻：弗洛伊德与精神分析的诞生 (13)</option><option value="舞台生活四十年：梅兰芳回忆录（全两册）">舞台生活四十年：梅兰芳回忆录（全两册） (6)</option><option value="艺术与恐惧：才华是一种恐惧，但创作永远是一种努力 ([_ (Z-Library)">艺术与恐惧：才华是一种恐惧，但创作永远是一种努力 ([_ (Z-Library) (24)</option><option value="艺术与恐惧：才华是一种恐惧，但创作永远是一种努力 ([_ (z-library.sk, 1lib.sk, z-lib.sk)">艺术与恐惧：才华是一种恐惧，但创作永远是一种努力 ([_ (z-library.sk, 1lib.sk, z-lib.sk) (8)</option><option value="英雄之旅：约瑟夫·坎贝尔亲述他的生活与工作">英雄之旅：约瑟夫·坎贝尔亲述他的生活与工作 (10)</option><option value="荒原狼（果麦经典）">荒原狼（果麦经典） (8)</option><option value="菊与刀（果麦经典）">菊与刀（果麦经典） (1)</option><option value="蛤蟆先生去看心理医生">蛤蟆先生去看心理医生 (25)</option><option value="行为改造大脑">行为改造大脑 (9)</option><option value="被困住的聪慧：注意缺陷多动障碍的情绪问题 (托马斯·E_ (Z-Library)">被困住的聪慧：注意缺陷多动障碍的情绪问题 (托马斯·E_ (Z-Library) (77)</option><option value="被忽视的孩子：如何克服童年的情感忽视">被忽视的孩子：如何克服童年的情感忽视 (284)</option><option value="被讨厌的勇气：“自我启发之父”阿德勒的哲学课">被讨厌的勇气：“自我启发之父”阿德勒的哲学课 (68)</option><option value="观影疗心">观影疗心 (12)</option><option value="视觉语言：人人皆可表达的一种语言">视觉语言：人人皆可表达的一种语言 (1)</option><option value="认生的人：如何克服社交焦虑（对不起，我可能对人过敏。当代社恐青年自救指南！日本国家公共医疗系统推荐使用！日本亚马逊心理学长销榜单TOP1全球一亿社恐患者的自我训练手册）">认生的人：如何克服社交焦虑（对不起，我可能对人过敏。当代社恐青年自救指南！日本国家公共医疗系统推荐使用！日本亚马逊心理学长销榜单TOP1全球一亿社恐患者的自我训练手册） (15)</option><option value="认知觉醒：开启自我改变的原动力">认知觉醒：开启自我改变的原动力 (8)</option><option value="认识你真好：建立深度而成熟的人际关系">认识你真好：建立深度而成熟的人际关系 (194)</option><option value="让钱自己流进来：普通人打造不依赖工资的赚钱系统">让钱自己流进来：普通人打造不依赖工资的赚钱系统 (17)</option><option value="论语 ( 国学大师韩兆琦主编，白话全译 )">论语 ( 国学大师韩兆琦主编，白话全译 ) (11)</option><option value="论读书">论读书 (10)</option><option value="试论网络言情小说的美学特征-詹秀敏">试论网络言情小说的美学特征-詹秀敏 (4)</option><option value="读懂纳瓦尔：普通人如何不靠运气变富">读懂纳瓦尔：普通人如何不靠运气变富 (61)</option><option value="读透《守弱》：以退为进的不内耗哲学">读透《守弱》：以退为进的不内耗哲学 (3)</option><option value="贫穷的本质：我们为什么摆脱不了贫穷（修订版）">贫穷的本质：我们为什么摆脱不了贫穷（修订版） (1)</option><option value="贾想Ⅱ：贾樟柯电影手记（2008—2016）">贾想Ⅱ：贾樟柯电影手记（2008—2016） (1)</option><option value="资本论（全三卷） (卡尔·马克思,中共中央马克思恩格斯列宁斯大林著作编译局) (Z-Library)">资本论（全三卷） (卡尔·马克思,中共中央马克思恩格斯列宁斯大林著作编译局) (Z-Library) (1)</option><option value="资本论（纪念版）全三卷">资本论（纪念版）全三卷 (10)</option><option value="赢回专注力">赢回专注力 (3)</option><option value="走出人格陷阱">走出人格陷阱 (6)</option><option value="走出原生家庭创伤">走出原生家庭创伤 (26)</option><option value="走出心灵荒野 用表达性写作摆脱孤独与迷茫 (Pdg2P_ (Z-Library).pdf">走出心灵荒野 用表达性写作摆脱孤独与迷茫 (Pdg2P_ (Z-Library).pdf (1)</option><option value="走出情感虐待：远离关系中的羞耻感，重塑自信人生">走出情感虐待：远离关系中的羞耻感，重塑自信人生 (59)</option><option value="超越好奇">超越好奇 (14)</option><option value="跟纳瓦尔学赚钱—纳瓦尔投资宝典">跟纳瓦尔学赚钱—纳瓦尔投资宝典 (1)</option><option value="躁郁之心：我与躁郁症共处的30年（经典版）（上）">躁郁之心：我与躁郁症共处的30年（经典版）（上） (99)</option><option value="身体从未忘记：心理创伤疗愈中的大脑、心智和身体">身体从未忘记：心理创伤疗愈中的大脑、心智和身体 (2)</option><option value="转化抑郁：用创造力治愈心灵=Transforming_ (Z-Library)">转化抑郁：用创造力治愈心灵=Transforming_ (Z-Library) (13)</option><option value="边缘型人格障碍特质大学生心理危机的影响因素-舒童">边缘型人格障碍特质大学生心理危机的影响因素-舒童 (2)</option><option value="追忆似水年华（全集）">追忆似水年华（全集） (1)</option><option value="通往心灵自由之路">通往心灵自由之路 (41)</option><option value="逻辑思维与写作">逻辑思维与写作 (1)</option><option value="邓小平时代 [转换版] (傅高义) (Z-Library).pdf">邓小平时代 [转换版] (傅高义) (Z-Library).pdf (7)</option><option value="重塑大脑，重塑人生">重塑大脑，重塑人生 (5)</option><option value="重塑爱情：如何摆脱父权制对两性关系的影响">重塑爱情：如何摆脱父权制对两性关系的影响 (10)</option><option value="金字塔原理">金字塔原理 (16)</option><option value="金钥匙系列：体验奇妙的经济世界">金钥匙系列：体验奇妙的经济世界 (1)</option><option value="金钥匙系列：你应该知道的10种创富工具">金钥匙系列：你应该知道的10种创富工具 (1)</option><option value="金钱心理学：财富、人性和幸福的永恒真相">金钱心理学：财富、人性和幸福的永恒真相 (31)</option><option value="金钱档案">金钱档案 (65)</option><option value="金钱的艺术">金钱的艺术 (53)</option><option value="金钱铁律：亿万富翁养成手册">金钱铁律：亿万富翁养成手册 (29)</option><option value="镜子、父亲、女人与疯子：拉康的精神分析世界">镜子、父亲、女人与疯子：拉康的精神分析世界 (2)</option><option value="长期主义：关注短期业绩，更要投资长期增长">长期主义：关注短期业绩，更要投资长期增长 (1)</option><option value="阅读是安静的自我觉醒（果麦经典）">阅读是安静的自我觉醒（果麦经典） (7)</option><option value="隐墙（果麦经典）">隐墙（果麦经典） (2)</option><option value="隐形创伤：如何疗愈看不见的童年伤痛">隐形创伤：如何疗愈看不见的童年伤痛 (15)</option><option value="隐形攻击：如何避免成为情感暴力的受害者">隐形攻击：如何避免成为情感暴力的受害者 (1)</option><option value="雪球专刊·特别版：段永平投资问答录商业逻辑篇">雪球专刊·特别版：段永平投资问答录商业逻辑篇 (22)</option><option value="雪花写作法：10步写出一篇好小说">雪花写作法：10步写出一篇好小说 (17)</option><option value="零极限：创造健康、平静与财富的夏威夷疗法（全新修订本）">零极限：创造健康、平静与财富的夏威夷疗法（全新修订本） (5)</option><option value="零秒思考">零秒思考 (5)</option><option value="静静的顿河（全集）">静静的顿河（全集） (2)</option><option value="非暴力沟通">非暴力沟通 (160)</option><option value="饥饿的母爱：治愈母爱缺失带来的创伤">饥饿的母爱：治愈母爱缺失带来的创伤 (3)</option><option value="骆玉明古诗词课（读客三个圈经典文库）">骆玉明古诗词课（读客三个圈经典文库） (20)</option><option value="高功能焦虑：别再害怕真实的自己">高功能焦虑：别再害怕真实的自己 (89)</option><option value="高敏感HSP笔记">高敏感HSP笔记 (27)</option><option value="高敏感人士的幸福清单">高敏感人士的幸福清单 (3)</option><option value="高维智慧 : 发现你的内在成长力">高维智慧 : 发现你的内在成长力 (7)</option><option value="黑客与画家（10万册纪念版）">黑客与画家（10万册纪念版） (2)</option>
-      </select>
-    </div>
+<!-- 顶部控制栏 -->
+<div class="header" id="header">
+  <h1>
+    <span>📚 划线卡片</span>
+    <button class="toggle-btn" id="toggleHeader">收起 ▲</button>
+  </h1>
+  <div class="controls">
+    <input type="text" id="search" placeholder="搜索划线内容...">
+    <select id="bookFilter">
+      <option value="">全部书籍</option>
+      <option value="13854dc3-fb52-4601-b52f-b539946d7ea0_读书摘记：写作、创造、自我">13854dc3-fb52-4601-b52f-b539946d7ea0_读书摘记：写作、创造、自我 (55)</option><option value="13a6721682bac0a2ae740288a28720fb.pdf">13a6721682bac0a2ae740288a28720fb.pdf (94)</option><option value="1731664917463793">1731664917463793 (5)</option><option value="2022版义务教育英语课程标准(Word)全文">2022版义务教育英语课程标准(Word)全文 (10)</option><option value="2051-6673-1-9">2051-6673-1-9 (1)</option><option value="30天学会创意 唤醒与生俱来的创造力潜能 (（美）崔拉_ (z-library.sk, 1lib.sk, z-lib.sk)">30天学会创意 唤醒与生俱来的创造力潜能 (（美）崔拉_ (z-library.sk, 1lib.sk, z-lib.sk) (26)</option><option value="@森里write flomo笔记">@森里write flomo笔记 (130)</option><option value="ADHD共患边缘型人格障碍患者冲动性特征及其与情绪调节策略的关系-常卫利">ADHD共患边缘型人格障碍患者冲动性特征及其与情绪调节策略的关系-常卫利 (3)</option><option value="AIGC：智能创作时代">AIGC：智能创作时代 (1)</option><option value="Accidental Genius">Accidental Genius (1)</option><option value="Austin Kleon">Austin Kleon (10)</option><option value="Autoethnography (Understanding Qualitative Research)">Autoethnography (Understanding Qualitative Research) (6)</option><option value="BillionWrites">BillionWrites (9)</option><option value="Borderline_personality_disorder">Borderline_personality_disorder (5)</option><option value="Company of One">Company of One (2)</option><option value="Complex PTSD and borderline personality disorder">Complex PTSD and borderline personality disorder (8)</option><option value="Creative Analysis: Art, Creativity and Clinical Process">Creative Analysis: Art, Creativity and Clinical Process (64)</option><option value="Die Technik wissenschaftlic_ (Z-Library)">Die Technik wissenschaftlic_ (Z-Library) (5)</option><option value="Elements (Robert Fritz) ">Elements (Robert Fritz)  (14)</option><option value="Evolutionary and Neurocognitive Approaches to Aesthetics, Creativity, and the Arts">Evolutionary and Neurocognitive Approaches to Aesthetics, Creativity, and the Arts (6)</option><option value="Excerpt.pdf">Excerpt.pdf (7)</option><option value="Explaining Creativity">Explaining Creativity (28)</option><option value="Finding Meaning in the Second Half of Life: How to Finally, Really Grow Up">Finding Meaning in the Second Half of Life: How to Finally, Really Grow Up (11)</option><option value="Fluent Forever How to Learn Any Language Fast and Never Forget it (Gabriel Wyner) (Z-Library).pdf">Fluent Forever How to Learn Any Language Fast and Never Forget it (Gabriel Wyner) (Z-Library).pdf (1)</option><option value="Fluent in 3 Months How Anyone at Any Age Can Learn to Speak Any Language from Anywhere in the World (Lewis, Benny) (Z-Library).pdf">Fluent in 3 Months How Anyone at Any Age Can Learn to Speak Any Language from Anywhere in the World (Lewis, Benny) (Z-Library).pdf (8)</option><option value="Getting divorced from mother &amp; dad the discoveries of the Fischer-Hoffman process">Getting divorced from mother &amp; dad the discoveries of the Fischer-Hoffman process (12)</option><option value="Guntrip-H.-1968.-Schizoid-phenomena-object-relations-and-the-self (1).pdf">Guntrip-H.-1968.-Schizoid-phenomena-object-relations-and-the-self (1).pdf (21)</option><option value="Inner Work">Inner Work (33)</option><option value="Intelligence, Information,_ (Z-Library)">Intelligence, Information,_ (Z-Library) (3)</option><option value="Introvert Power Why Your In_ (Z-Library).epub">Introvert Power Why Your In_ (Z-Library).epub (29)</option><option value="I型人格：一本书全方位解析MBTI中的内倾型人格">I型人格：一本书全方位解析MBTI中的内倾型人格 (24)</option><option value="KO！再见，边缘型人格！">KO！再见，边缘型人格！ (35)</option><option value="Letter To My Imagination">Letter To My Imagination (4)</option><option value="Living Between Worlds Findi_ (Z-Library).epub">Living Between Worlds Findi_ (Z-Library).epub (11)</option><option value="MBTI：潜能开发和人性攻略">MBTI：潜能开发和人性攻略 (1)</option><option value="Make It Stick">Make It Stick (7)</option><option value="On Becoming a Person">On Becoming a Person (38)</option><option value="Orbiting the giant hairball : a corporate fool&#x27;s guide to surviving with grace">Orbiting the giant hairball : a corporate fool&#x27;s guide to surviving with grace (2)</option><option value="Parallel Thinking">Parallel Thinking (1)</option><option value="Power of Your Other Hand">Power of Your Other Hand (2)</option><option value="Scattered Minds The Origins_ (Z-Library)">Scattered Minds The Origins_ (Z-Library) (208)</option><option value="Scattered-Minds_-A-New-Look-At-The-Origins-And-Healing-Of-Attention-Deficit-Disorder-Notebook-2">Scattered-Minds_-A-New-Look-At-The-Origins-And-Healing-Of-Attention-Deficit-Disorder-Notebook-2 (55)</option><option value="Schizoid Phenomena, Object-Relations and the Self">Schizoid Phenomena, Object-Relations and the Self (13)</option><option value="Scrivener 3 User Manual">Scrivener 3 User Manual (5)</option><option value="Simplicity">Simplicity (6)</option><option value="Six Thinking Hats">Six Thinking Hats (1)</option><option value="Stepping-back-to-move-forward">Stepping-back-to-move-forward (3)</option><option value="Surfaces and Essences: Analogy as the Fuel and Fire of Thinking">Surfaces and Essences: Analogy as the Fuel and Fire of Thinking (3)</option><option value="The Creative Habit">The Creative Habit (14)</option><option value="The Creative Process">The Creative Process (6)</option><option value="The Daily Artist&#x27;s Way: 366 Meditations for Creative Living">The Daily Artist&#x27;s Way: 366 Meditations for Creative Living (15)</option><option value="The Dark Side of Creativity: Original Thinkers Can Be More Dishonest">The Dark Side of Creativity: Original Thinkers Can Be More Dishonest (4)</option><option value="The Drama of the Gifted Child">The Drama of the Gifted Child (2)</option><option value="The Emotional Brain">The Emotional Brain (7)</option><option value="The Mechanism of Mind (Edwa_ (Z-Library)">The Mechanism of Mind (Edwa_ (Z-Library) (1)</option><option value="The Minds Best Work (David_ (z-library.sk, 1lib.sk, z-lib.sk)">The Minds Best Work (David_ (z-library.sk, 1lib.sk, z-lib.sk) (1)</option><option value="The Timeless Way of Buildin_ (Z-Library)">The Timeless Way of Buildin_ (Z-Library) (25)</option><option value="The_Economist_USA_-_April_27_2024.pdf">The_Economist_USA_-_April_27_2024.pdf (1)</option><option value="Therapeutic Potential for C_ (Z-Library).pdf">Therapeutic Potential for C_ (Z-Library).pdf (26)</option><option value="Thinking On Paper (V. A. Ho_ (Z-Library)">Thinking On Paper (V. A. Ho_ (Z-Library) (5)</option><option value="Thinking in Pictures">Thinking in Pictures (10)</option><option value="Where Good Ideas Come From">Where Good Ideas Come From (7)</option><option value="Why So Stupid (Edward De Bono) (Z-Library)">Why So Stupid (Edward De Bono) (Z-Library) (1)</option><option value="WriteTech">WriteTech (18)</option><option value="Writing Without Teachers (P_ (Z-Library).pdf">Writing Without Teachers (P_ (Z-Library).pdf (63)</option><option value="Writing to Heal A guided jo_ (Z-Library)">Writing to Heal A guided jo_ (Z-Library) (19)</option><option value="Writing to Heal the Soul">Writing to Heal the Soul (26)</option><option value="Writing with Power Techniqu_ (Z-Library).epub">Writing with Power Techniqu_ (Z-Library).epub (37)</option><option value="Your Life as Art">Your Life as Art (48)</option><option value="article_1719397180">article_1719397180 (1)</option><option value="ed233342.tif.pdf">ed233342.tif.pdf (5)</option><option value="filter-1">filter-1 (10)</option><option value="how to build st">how to build st (13)</option><option value="temp">temp (2)</option><option value="temp.pdf">temp.pdf (3)</option><option value="“嗑CP”、玩设定的女频新时代——2018-19年中国网络文学女频综述-肖映萱">“嗑CP”、玩设定的女频新时代——2018-19年中国网络文学女频综述-肖映萱 (1)</option><option value="《一人创作系统实操指南｜Write to Live》.pdf">《一人创作系统实操指南｜Write to Live》.pdf (18)</option><option value="《顶级创作者之路》_V1.0_仅内部参考.pdf">《顶级创作者之路》_V1.0_仅内部参考.pdf (1)</option><option value="一个孤独漫步者的遐想">一个孤独漫步者的遐想 (4)</option><option value="一个心理咨询师的个人账号">一个心理咨询师的个人账号 (2)</option><option value="一分钟百万富翁 ( etc.) (z-library.sk, 1lib.sk, z-lib.sk)">一分钟百万富翁 ( etc.) (z-library.sk, 1lib.sk, z-lib.sk) (51)</option><option value="一只鸟接着一只鸟：关于写作与人生的建议">一只鸟接着一只鸟：关于写作与人生的建议 (1)</option><option value="一定要告诉孩子的18堂商业思维课">一定要告诉孩子的18堂商业思维课 (1)</option><option value="三个存钱罐：金融学教授的儿童财商启蒙课">三个存钱罐：金融学教授的儿童财商启蒙课 (2)</option><option value="三国演义（人民文学版）">三国演义（人民文学版） (2)</option><option value="不原谅也没关系">不原谅也没关系 (191)</option><option value="不安的时候，坐下来写 (娜塔莉·戈德堡 (Natali_ (Z-Library)">不安的时候，坐下来写 (娜塔莉·戈德堡 (Natali_ (Z-Library) (6)</option><option value="不愿活下去的人：关于生死的特别报道">不愿活下去的人：关于生死的特别报道 (1)</option><option value="与孤独共处：喧嚣世界中的内心成长">与孤独共处：喧嚣世界中的内心成长 (19)</option><option value="个人品牌打造：从0到1低成本创业">个人品牌打造：从0到1低成本创业 (1)</option><option value="中国文化的深层结构">中国文化的深层结构 (4)</option><option value="中国通史（套装共上、下2册）">中国通史（套装共上、下2册） (10)</option><option value="中年之路：人格的第二次成型">中年之路：人格的第二次成型 (63)</option><option value="中年女性网络言情小说阅读研究——基于番茄小说APP用户-李琬钰">中年女性网络言情小说阅读研究——基于番茄小说APP用户-李琬钰 (7)</option><option value="为何家会伤人（百万畅销纪念版）">为何家会伤人（百万畅销纪念版） (404)</option><option value="为自己思考:终身成长的底层逻辑">为自己思考:终身成长的底层逻辑 (39)</option><option value="乌合之众（果麦经典）">乌合之众（果麦经典） (35)</option><option value="也许你该找个人聊聊">也许你该找个人聊聊 (4)</option><option value="习惯逃避：你在害怕什么（回避型人格自救手册。拖延、讨好、自卑、社恐的背后，不过是一颗习惯逃避的灵魂。）">习惯逃避：你在害怕什么（回避型人格自救手册。拖延、讨好、自卑、社恐的背后，不过是一颗习惯逃避的灵魂。） (321)</option><option value="乡土中国">乡土中国 (37)</option><option value="书写自愈力">书写自愈力 (45)</option><option value="书籍的世界">书籍的世界 (4)</option><option value="亲密关系（第6版）">亲密关系（第6版） (46)</option><option value="人性的弱点（果麦经典）">人性的弱点（果麦经典） (70)</option><option value="人都是要死的">人都是要死的 (7)</option><option value="人间失格（读客三个圈经典文库）">人间失格（读客三个圈经典文库） (10)</option><option value="人间草木：汪曾祺散文精选集">人间草木：汪曾祺散文精选集 (1)</option><option value="人际界限">人际界限 (15)</option><option value="仪式的力量">仪式的力量 (10)</option><option value="价值心法">价值心法 (17)</option><option value="价值：我对投资的思考 (张磊) (Z-Library)">价值：我对投资的思考 (张磊) (Z-Library) (4)</option><option value="优秀的绵羊">优秀的绵羊 (101)</option><option value="会赚钱的人想的不一样">会赚钱的人想的不一样 (2)</option><option value="传习录">传习录 (21)</option><option value="低学历的五大师 (张建安著, Zhang Jianan_ (z-library.sk, 1lib.sk, z-lib.sk)">低学历的五大师 (张建安著, Zhang Jianan_ (z-library.sk, 1lib.sk, z-lib.sk) (1)</option><option value="体验的世界：精神分析主体间性理论及其应用">体验的世界：精神分析主体间性理论及其应用 (2)</option><option value="作家的童年经验及其对创作的影响_童庆炳">作家的童年经验及其对创作的影响_童庆炳 (3)</option><option value="作文杂谈（2021版）">作文杂谈（2021版） (1)</option><option value="你一定爱读的极简欧洲史（增订纪念版)">你一定爱读的极简欧洲史（增订纪念版) (2)</option><option value="你不可不知的法律常识">你不可不知的法律常识 (1)</option><option value="你当像鸟飞往你的山">你当像鸟飞往你的山 (2)</option><option value="你想过怎样的一生？ 从0 到100 岁，该学会的人生大事，都在这些生活的小事里了 (海克·法勒 文 瓦莱里奥·维达里 图) (Z-Library).pdf">你想过怎样的一生？ 从0 到100 岁，该学会的人生大事，都在这些生活的小事里了 (海克·法勒 文 瓦莱里奥·维达里 图) (Z-Library).pdf (5)</option><option value="你的敏感，就是你的天赋">你的敏感，就是你的天赋 (48)</option><option value="你经历了什么？：关于创伤、疗愈和复原力的对话">你经历了什么？：关于创伤、疗愈和复原力的对话 (43)</option><option value="傲慢与偏见">傲慢与偏见 (4)</option><option value="儿童注意缺陷多动障碍(ADHD)的“冷”“热”执行功能_张微">儿童注意缺陷多动障碍(ADHD)的“冷”“热”执行功能_张微 (6)</option><option value="允许爱情消失">允许爱情消失 (127)</option><option value="全面深化改革与中国经济新发展">全面深化改革与中国经济新发展 (2)</option><option value="关系的重建【豆瓣评分8.9分，风靡世界、长踞排行榜前列的高评分作品，改变无数读者情感命运！知名媒体、作者、教授、大咖强烈推荐！诺贝尔奖生理学或医学奖得主、美国精神分析协会主 席共同推荐！每一份感情，都可以被经营成你想要的样子！】">关系的重建【豆瓣评分8.9分，风靡世界、长踞排行榜前列的高评分作品，改变无数读者情感命运！知名媒体、作者、教授、大咖强烈推荐！诺贝尔奖生理学或医学奖得主、美国精神分析协会主 席共同推荐！每一份感情，都可以被经营成你想要的样子！】 (43)</option><option value="具身心智：认知科学和人类经验 ([智] F.瓦雷拉，[_ (Z-Library)">具身心智：认知科学和人类经验 ([智] F.瓦雷拉，[_ (Z-Library) (1)</option><option value="内向者优势">内向者优势 (10)</option><option value="内在的宇宙">内在的宇宙 (2)</option><option value="内在觉醒：关于联结、疗愈与提升复原力">内在觉醒：关于联结、疗愈与提升复原力 (55)</option><option value="内容即品牌：长期主义者的内容创作方法论">内容即品牌：长期主义者的内容创作方法论 (81)</option><option value="内容即未来：数字产品规划与建模">内容即未来：数字产品规划与建模 (5)</option><option value="内容引爆增长：建立竞争优势的内容营销方法论">内容引爆增长：建立竞争优势的内容营销方法论 (16)</option><option value="再活一次——用写作来调心">再活一次——用写作来调心 (2)</option><option value="写下来，痛苦就会过去">写下来，痛苦就会过去 (2)</option><option value="写作与生活（克拉丽丝·李斯佩克朵作品集）">写作与生活（克拉丽丝·李斯佩克朵作品集） (3)</option><option value="写作库2（未处理）">写作库2（未处理） (165)</option><option value="写作是门手艺">写作是门手艺 (81)</option><option value="写作的禅机">写作的禅机 (1)</option><option value="写作脑科学：如何写出打动人心的故事">写作脑科学：如何写出打动人心的故事 (5)</option><option value="写出我心：普通人如何通过写作表达自己">写出我心：普通人如何通过写作表达自己 (57)</option><option value="写给分心者的生活指南">写给分心者的生活指南 (8)</option><option value="分类思维：不确定情境中合理决策的科学与艺术">分类思维：不确定情境中合理决策的科学与艺术 (3)</option><option value="分裂的自我">分裂的自我 (7)</option><option value="创伤与复原">创伤与复原 (93)</option><option value="创伤之前我是谁：找回内心强大的自我">创伤之前我是谁：找回内心强大的自我 (3)</option><option value="创作者">创作者 (57)</option><option value="创意心理学 唤醒与生俱来的创造力潜能 (（美）罗伯特._ (z-library.sk, 1lib.sk, z-lib.sk)">创意心理学 唤醒与生俱来的创造力潜能 (（美）罗伯特._ (z-library.sk, 1lib.sk, z-lib.sk) (11)</option><option value="创意无限 (（美）罗伯特·弗兰兹（Robert Fritz）著；杨颖译, (美) 弗兰兹, R).pdf">创意无限 (（美）罗伯特·弗兰兹（Robert Fritz）著；杨颖译, (美) 弗兰兹, R).pdf (30)</option><option value="创意的生成 (詹姆斯.韦伯.杨) (Z-Library).pdf">创意的生成 (詹姆斯.韦伯.杨) (Z-Library).pdf (53)</option><option value="创意行为：存在即答案">创意行为：存在即答案 (12)</option><option value="创造性思维 (（德）韦特海默著；林宗基译) (z-library.sk, 1lib.sk, z-lib.sk)">创造性思维 (（德）韦特海默著；林宗基译) (z-library.sk, 1lib.sk, z-lib.sk) (2)</option><option value="创造性才能 它们的性质、用途与培养 their nat_ (Z-Library)">创造性才能 它们的性质、用途与培养 their nat_ (Z-Library) (1)</option><option value="创造性：人类创新的科学 第2版 (R. Keith S_ (Z-Library)">创造性：人类创新的科学 第2版 (R. Keith S_ (Z-Library) (10)</option><option value="刻意练习：如何从新手到大师">刻意练习：如何从新手到大师 (15)</option><option value="动机与人格（马斯洛心理学经典译丛）">动机与人格（马斯洛心理学经典译丛） (12)</option><option value="包法利夫人">包法利夫人 (1)</option><option value="十万个为什么：心理学">十万个为什么：心理学 (8)</option><option value="半小时漫画宇宙大爆炸">半小时漫画宇宙大爆炸 (2)</option><option value="半小时漫画经济学2：金融危机篇">半小时漫画经济学2：金融危机篇 (1)</option><option value="华氏451（全新特别版）">华氏451（全新特别版） (4)</option><option value="博尔赫斯，口述">博尔赫斯，口述 (4)</option><option value="卡耐基说话技巧与人际交往">卡耐基说话技巧与人际交往 (37)</option><option value="压岁钱的游戏：一位投资人爸爸写给孩子的9堂财商课">压岁钱的游戏：一位投资人爸爸写给孩子的9堂财商课 (41)</option><option value="厌女（增订本）">厌女（增订本） (1)</option><option value="厌女：日本的女性嫌恶(重制版)">厌女：日本的女性嫌恶(重制版) (111)</option><option value="原来你怪可爱的（和情绪小怪物一起喜欢并善待自己）">原来你怪可爱的（和情绪小怪物一起喜欢并善待自己） (2)</option><option value="原生家庭的羁绊：用心理学改写人生脚本">原生家庭的羁绊：用心理学改写人生脚本 (225)</option><option value="原生家庭：如何修补自己的性格缺陷">原生家庭：如何修补自己的性格缺陷 (273)</option><option value="去当你想当的任何人吧">去当你想当的任何人吧 (9)</option><option value="受戒：汪曾祺小说精选（读客三个圈经典文库）">受戒：汪曾祺小说精选（读客三个圈经典文库） (4)</option><option value="变形记：中短篇小说集（卡夫卡小说全集）">变形记：中短篇小说集（卡夫卡小说全集） (1)</option><option value="史蒂夫·乔布斯传（修订版）">史蒂夫·乔布斯传（修订版） (9)</option><option value="叶芝：真人与假面">叶芝：真人与假面 (10)</option><option value="向内生长：唤醒你的内在能量">向内生长：唤醒你的内在能量 (2)</option><option value="哲学家们都干了些什么？ （修订版）">哲学家们都干了些什么？ （修订版） (9)</option><option value="哲学研究">哲学研究 (2)</option><option value="唤醒创作力：写给被“卡”住的创作者">唤醒创作力：写给被“卡”住的创作者 (154)</option><option value="唤醒大脑：神经可塑性如何帮助大脑自我疗愈">唤醒大脑：神经可塑性如何帮助大脑自我疗愈 (10)</option><option value="回忆、梦、思考：荣格自传（Loft）">回忆、梦、思考：荣格自传（Loft） (5)</option><option value="在轮下">在轮下 (2)</option><option value="地下室手记（果麦经典）">地下室手记（果麦经典） (14)</option><option value="基督山伯爵">基督山伯爵 (3)</option><option value="基础教育课程">基础教育课程 (23)</option><option value="堆肥——未分类">堆肥——未分类 (142)</option><option value="复利效应">复利效应 (1)</option><option value="复旦名师陈果：人生哲学课（共2册）">复旦名师陈果：人生哲学课（共2册） (2)</option><option value="复杂（第一推动丛书·综合系列）">复杂（第一推动丛书·综合系列） (1)</option><option value="外研社K12">外研社K12 (6)</option><option value="大众文化的女性主义指南">大众文化的女性主义指南 (1)</option><option value="大师教我学知识：阅读与写作">大师教我学知识：阅读与写作 (1)</option><option value="大话中国艺术史">大话中国艺术史 (1)</option><option value="大道无形：段永平">大道无形：段永平 (7)</option><option value="天生不同：人格类型识别和潜能开发（MBTI开山之作）">天生不同：人格类型识别和潜能开发（MBTI开山之作） (14)</option><option value="天资差异">天资差异 (54)</option><option value="失控">失控 (6)</option><option value="失落的致富经典">失落的致富经典 (104)</option><option value="奇想之年">奇想之年 (7)</option><option value="奥义书（精装）">奥义书（精装） (1)</option><option value="女性的英雄之旅">女性的英雄之旅 (6)</option><option value="好好告别：世界葬礼观察手记">好好告别：世界葬礼观察手记 (1)</option><option value="好好说话2：简单有效的高情商沟通术">好好说话2：简单有效的高情商沟通术 (136)</option><option value="如何了解一个人">如何了解一个人 (8)</option><option value="如何形成清晰的观点">如何形成清晰的观点 (2)</option><option value="如何快速了解一个行业">如何快速了解一个行业 (69)</option><option value="如何讓馬飛起來">如何讓馬飛起來 (3)</option><option value="如何阅读一本书 ([美]莫提默·J·艾德勒 查尔斯·范_ (Z-Library).epub">如何阅读一本书 ([美]莫提默·J·艾德勒 查尔斯·范_ (Z-Library).epub (2)</option><option value="娜拉走后怎样（轻经典）">娜拉走后怎样（轻经典） (1)</option><option value="娱乐至死">娱乐至死 (77)</option><option value="字节跳动：从0到1的秘密">字节跳动：从0到1的秘密 (1)</option><option value="存在主义心理治疗">存在主义心理治疗 (21)</option><option value="宋词三百首（彩图精装）">宋词三百首（彩图精装） (1)</option><option value="定位：争夺用户心智的战争（经典重译版）">定位：争夺用户心智的战争（经典重译版） (3)</option><option value="家里，容不下暴力：40位家暴当事人的创伤与疗愈">家里，容不下暴力：40位家暴当事人的创伤与疗愈 (15)</option><option value="富兰克林自传">富兰克林自传 (7)</option><option value="富爸爸商学院+富爸爸致富需要做的6件事+富爸爸穷爸爸+富爸爸提高你的财商+富爸爸财务自由之路(修订版)(套装共5册)">富爸爸商学院+富爸爸致富需要做的6件事+富爸爸穷爸爸+富爸爸提高你的财商+富爸爸财务自由之路(修订版)(套装共5册) (151)</option><option value="对于自己，你还是个陌生人">对于自己，你还是个陌生人 (14)</option><option value="对财富说是">对财富说是 (83)</option><option value="小学生心理学漫画1：社交力">小学生心理学漫画1：社交力 (3)</option><option value="小狗钱钱（套装全2册）">小狗钱钱（套装全2册） (47)</option><option value="小逻辑">小逻辑 (19)</option><option value="少有人走的路(1-8全套)">少有人走的路(1-8全套) (102)</option><option value="巨人的工具">巨人的工具 (40)</option><option value="巨婴国: 国内心理学家系统透视中国国民性">巨婴国: 国内心理学家系统透视中国国民性 (124)</option><option value="巴比伦最富有的人">巴比伦最富有的人 (10)</option><option value="幸福之路（果麦经典）">幸福之路（果麦经典） (6)</option><option value="幼儿英语分级阅读：入门级">幼儿英语分级阅读：入门级 (2)</option><option value="庞颖：当父母的爱带着条件，人的配得感就会打折（轻心理）">庞颖：当父母的爱带着条件，人的配得感就会打折（轻心理） (2)</option><option value="强势">强势 (4)</option><option value="当代教育心理学（第3版） (陈琦，刘儒德) (z-library.sk, 1lib.sk, z-lib.sk)">当代教育心理学（第3版） (陈琦，刘儒德) (z-library.sk, 1lib.sk, z-lib.sk) (52)</option><option value="当大脑坠入爱河">当大脑坠入爱河 (8)</option><option value="当大脑陷入孤独">当大脑陷入孤独 (6)</option><option value="当我遇见一个人：母婴关系决定孩子的一切关系">当我遇见一个人：母婴关系决定孩子的一切关系 (1)</option><option value="影响力（全新升级版）">影响力（全新升级版） (9)</option><option value="德米安">德米安 (20)</option><option value="心智探奇：人类心智的起源与进化">心智探奇：人类心智的起源与进化 (2)</option><option value="心流+发现心流（套装全2册）">心流+发现心流（套装全2册） (28)</option><option value="心流：最优体验心理学">心流：最优体验心理学 (12)</option><option value="心灵书写：让写作通往疗愈">心灵书写：让写作通往疗愈 (13)</option><option value="心理学与炼金术（荣格精选集）">心理学与炼金术（荣格精选集） (2)</option><option value="心理类型">心理类型 (2)</option><option value="怎样写作">怎样写作 (11)</option><option value="怎样读书">怎样读书 (2)</option><option value="思考致富">思考致富 (44)</option><option value="思考，快与慢">思考，快与慢 (13)</option><option value="思考，快与慢（第二版）">思考，快与慢（第二版） (36)</option><option value="性别战争">性别战争 (1)</option><option value="性别打结">性别打结 (11)</option><option value="性学观止：插图第6版（上下册）">性学观止：插图第6版（上下册） (4)</option><option value="悲惨世界（全册）">悲惨世界（全册） (1)</option><option value="情感勒索">情感勒索 (20)</option><option value="情感无能：那些渴望爱却无法真正去爱的人">情感无能：那些渴望爱却无法真正去爱的人 (80)</option><option value="情绪">情绪 (16)</option><option value="成为母亲的选择">成为母亲的选择 (4)</option><option value="成为母亲的选择（“我爱孩子，但我后悔当妈妈。”以色列社会学家奥娜·多纳特话题之作，被翻译为近十种语言，在以色列、德国等地引发热议。初次聚焦“后悔生育”的话题，采访二十三位后悔生育的母亲，展现女性生育前后的情感历程。）">成为母亲的选择（“我爱孩子，但我后悔当妈妈。”以色列社会学家奥娜·多纳特话题之作，被翻译为近十种语言，在以色列、德国等地引发热议。初次聚焦“后悔生育”的话题，采访二十三位后悔生育的母亲，展现女性生育前后的情感历程。） (213)</option><option value="我与地坛">我与地坛 (15)</option><option value="我为什么要写作（小经典系列）">我为什么要写作（小经典系列） (1)</option><option value="我们为什么不爱了：走出亲密内耗">我们为什么不爱了：走出亲密内耗 (9)</option><option value="我们内心的冲突（果麦经典）">我们内心的冲突（果麦经典） (323)</option><option value="我们内心的崩裂：霍妮谈这个时代的基本焦虑与自我挣扎">我们内心的崩裂：霍妮谈这个时代的基本焦虑与自我挣扎 (12)</option><option value="我们如何正确思维">我们如何正确思维 (93)</option><option value="我们生活在巨大的差距里 (余华) (Z-Library).pdf">我们生活在巨大的差距里 (余华) (Z-Library).pdf (16)</option><option value="我在精神病院抗抑郁">我在精神病院抗抑郁 (2)</option><option value="我手写我心：如何通过写作成为更好的自己">我手写我心：如何通过写作成为更好的自己 (23)</option><option value="我才不想做家务（全网剖析隐形家务最彻底的一本书！）">我才不想做家务（全网剖析隐形家务最彻底的一本书！） (1)</option><option value="我的策展之道">我的策展之道 (1)</option><option value="我看见的世界：李飞飞自传">我看见的世界：李飞飞自传 (3)</option><option value="战争中没有女性（阿列克谢耶维奇作品）">战争中没有女性（阿列克谢耶维奇作品） (4)</option><option value="打造第二大脑">打造第二大脑 (80)</option><option value="把自己产品化：踏上发现真我的英雄之旅">把自己产品化：踏上发现真我的英雄之旅 (23)</option><option value="搞定：无压工作的艺术+提升工作与生活效率+平衡工作与生活的艺术（全集）">搞定：无压工作的艺术+提升工作与生活效率+平衡工作与生活的艺术（全集） (73)</option><option value="政府工作报告——2026年3月5日在第十四届全国人民代表大会第四次会议上">政府工作报告——2026年3月5日在第十四届全国人民代表大会第四次会议上 (1)</option><option value="数学觉醒：学会更清晰地思考">数学觉醒：学会更清晰地思考 (34)</option><option value="文化理论与大众文化导论（第七版）">文化理论与大众文化导论（第七版） (7)</option><option value="文化资本与社会炼金术：布尔迪厄访谈录 (皮埃尔·布迪厄) (Z-Library)">文化资本与社会炼金术：布尔迪厄访谈录 (皮埃尔·布迪厄) (Z-Library) (1)</option><option value="文心：别开生面的语文课（2021版）">文心：别开生面的语文课（2021版） (1)</option><option value="文章作法：写好文章就这几步（2021版）">文章作法：写好文章就这几步（2021版） (1)</option><option value="文艺心理学教程 (童庆炳，程正民主编, Qingbin_ (z-library.sk, 1lib.sk, z-lib.sk)">文艺心理学教程 (童庆炳，程正民主编, Qingbin_ (z-library.sk, 1lib.sk, z-lib.sk) (13)</option><option value="斯坦福大学写作课">斯坦福大学写作课 (2)</option><option value="无尽与有限36岁当妈妈 (荞麦) (z-library.sk, 1lib.sk, z-lib.sk)">无尽与有限36岁当妈妈 (荞麦) (z-library.sk, 1lib.sk, z-lib.sk) (22)</option><option value="暮色将尽">暮色将尽 (1)</option><option value="更富有、更睿智、更快乐：世界顶尖投资者是如何在市场和生活中实现双赢的">更富有、更睿智、更快乐：世界顶尖投资者是如何在市场和生活中实现双赢的 (4)</option><option value="曾国藩传">曾国藩传 (1)</option><option value="曾国藩传（张宏杰全新增补版）">曾国藩传（张宏杰全新增补版） (19)</option><option value="最好的决定（知更鸟系列）">最好的决定（知更鸟系列） (1)</option><option value="最小阻力之路">最小阻力之路 (8)</option><option value="有趣的金钱">有趣的金钱 (18)</option><option value="有钱人和你想的不一样">有钱人和你想的不一样 (50)</option><option value="有钱人和你想的不一样.2">有钱人和你想的不一样.2 (2)</option><option value="枪炮、病菌与钢铁 : 人类社会的命运 (世纪人文系列丛书·开放人文)">枪炮、病菌与钢铁 : 人类社会的命运 (世纪人文系列丛书·开放人文) (1)</option><option value="梁永安：爱情这门课，你可别挂科！">梁永安：爱情这门课，你可别挂科！ (78)</option><option value="梵高手稿">梵高手稿 (6)</option><option value="樊登漫画《论语》">樊登漫画《论语》 (5)</option><option value="欢迎信：不止是写作，不止是游戏。">欢迎信：不止是写作，不止是游戏。 (2)</option><option value="毛泽东传：名著珍藏版（插图本）">毛泽东传：名著珍藏版（插图本） (41)</option><option value="沉默的大多数">沉默的大多数 (13)</option><option value="沟通的本质">沟通的本质 (60)</option><option value="治愈系心理学 孤独 回归自我 (（英）安东尼·斯托尔（_ (Z-Library).pdf">治愈系心理学 孤独 回归自我 (（英）安东尼·斯托尔（_ (Z-Library).pdf (94)</option><option value="波士顿咨询工作法：精准运用直觉">波士顿咨询工作法：精准运用直觉 (5)</option><option value="泰戈尔英汉双语诗集:飞鸟集">泰戈尔英汉双语诗集:飞鸟集 (19)</option><option value="洛克菲勒写给儿子的38封信">洛克菲勒写给儿子的38封信 (62)</option><option value="洛克菲勒给子女的一生忠告">洛克菲勒给子女的一生忠告 (23)</option><option value="津巴多普通心理学（第8版）">津巴多普通心理学（第8版） (1)</option><option value="活出生命的意义">活出生命的意义 (11)</option><option value="流行的真相：从 Labubu 到AI，人类为什么上瘾？（轻访谈）">流行的真相：从 Labubu 到AI，人类为什么上瘾？（轻访谈） (3)</option><option value="浮生取义——对华北某县自杀现象的文化解读">浮生取义——对华北某县自杀现象的文化解读 (10)</option><option value="海蒂（有声双语经典）">海蒂（有声双语经典） (1)</option><option value="深度关系">深度关系 (9)</option><option value="混乱：如何成为失控时代的掌控者">混乱：如何成为失控时代的掌控者 (3)</option><option value="清醒思考的策略">清醒思考的策略 (247)</option><option value="游戏与现实 ([英]温尼科特（D. W. Winnic_ (Z-Library).pdf">游戏与现实 ([英]温尼科特（D. W. Winnic_ (Z-Library).pdf (4)</option><option value="源氏物语">源氏物语 (1)</option><option value="漫画历史线：轻松学古文（套装共5册）">漫画历史线：轻松学古文（套装共5册） (2)</option><option value="热锅上的家庭：家庭问题背后的心理真相">热锅上的家庭：家庭问题背后的心理真相 (13)</option><option value="爱与依恋的力量">爱与依恋的力量 (88)</option><option value="爱弥儿">爱弥儿 (5)</option><option value="爱的艺术 (The Art of Loving) (艾·弗洛姆 (Eric Fromm)) (Z-Library).pdf">爱的艺术 (The Art of Loving) (艾·弗洛姆 (Eric Fromm)) (Z-Library).pdf (56)</option><option value="爱的艺术 (The Art of Loving) (艾·弗洛姆 (Eric Fromm)) (Z-Library).pdf爱的艺术 (The Art of Loving) (艾·弗洛姆 (Eric Fromm)) (Z-Library).pdf">爱的艺术 (The Art of Loving) (艾·弗洛姆 (Eric Fromm)) (Z-Library).pdf爱的艺术 (The Art of Loving) (艾·弗洛姆 (Eric Fromm)) (Z-Library).pdf (8)</option><option value="牛奶可乐经济学（全新升级版）">牛奶可乐经济学（全新升级版） (1)</option><option value="牡丹亭：绘本">牡丹亭：绘本 (3)</option><option value="玩赚自媒体：建号、引流、变现到IP打造">玩赚自媒体：建号、引流、变现到IP打造 (1)</option><option value="现代性背景下网络趣缘群体对自我认同的建构——以“同人女”群体以及耽美现象为例-吕品">现代性背景下网络趣缘群体对自我认同的建构——以“同人女”群体以及耽美现象为例-吕品 (6)</option><option value="理财就是理生活">理财就是理生活 (2)</option><option value="生活的意义">生活的意义 (3)</option><option value="用一年时间重生：如何从0到1开启个人事业">用一年时间重生：如何从0到1开启个人事业 (1)</option><option value="用写作重建自我">用写作重建自我 (79)</option><option value="用图像思考：与孤独症共生">用图像思考：与孤独症共生 (1)</option><option value="画家之眼：审美的十二要素（果麦经典）">画家之眼：审美的十二要素（果麦经典） (5)</option><option value="画给孩子的中国历史（精装彩绘本）">画给孩子的中国历史（精装彩绘本） (15)</option><option value="百万富翁快车道">百万富翁快车道 (88)</option><option value="直击本质：洞察事物底层逻辑的思考方法">直击本质：洞察事物底层逻辑的思考方法 (10)</option><option value="直视骄阳：征服死亡恐惧">直视骄阳：征服死亡恐惧 (24)</option><option value="真正拥有主体性的人，都付出过这7个代价（轻心理）">真正拥有主体性的人，都付出过这7个代价（轻心理） (1)</option><option value="知识炼金术：知识萃取和运营的艺术与实务">知识炼金术：知识萃取和运营的艺术与实务 (16)</option><option value="知识的边界">知识的边界 (6)</option><option value="研究是一门艺术">研究是一门艺术 (1)</option><option value="硅谷钢铁侠：埃隆·马斯克的冒险人生">硅谷钢铁侠：埃隆·马斯克的冒险人生 (15)</option><option value="社交恐惧症（给社交恐惧者的人格画像与深度剖析） (找回真我系列)">社交恐惧症（给社交恐惧者的人格画像与深度剖析） (找回真我系列) (38)</option><option value="社会心理学(第11版教育部高等学校心理学教学指导委员会推荐用书) (戴维·迈尔斯,David Myers,侯玉波,乐国安,张智勇) (Z-Library)">社会心理学(第11版教育部高等学校心理学教学指导委员会推荐用书) (戴维·迈尔斯,David Myers,侯玉波,乐国安,张智勇) (Z-Library) (17)</option><option value="社会性动物（第12版）">社会性动物（第12版） (868)</option><option value="神经症与人的成长：自我实现的挣扎">神经症与人的成长：自我实现的挣扎 (228)</option><option value="禅与摩托车维修艺术">禅与摩托车维修艺术 (3)</option><option value="穷查理宝典：查理·芒格智慧箴言录(elib.cc)">穷查理宝典：查理·芒格智慧箴言录(elib.cc) (109)</option><option value="穷查理宝典：查理·芒格智慧箴言录（全新增订本）">穷查理宝典：查理·芒格智慧箴言录（全新增订本） (36)</option><option value="空洞的心：成瘾的真相与疗愈">空洞的心：成瘾的真相与疗愈 (105)</option><option value="突围原生家庭：如何在过去的伤痛中重建自我">突围原生家庭：如何在过去的伤痛中重建自我 (12)</option><option value="童年创伤对研究生边缘型人格障碍症状形成的影响_应对方式和心理弹性的链式中介作用-王嘉慧">童年创伤对研究生边缘型人格障碍症状形成的影响_应对方式和心理弹性的链式中介作用-王嘉慧 (3)</option><option value="童年创伤对青少年情绪障碍患者学校适应的影响：边缘型人格特征与亲社会行为的链式中介作用-付浩">童年创伤对青少年情绪障碍患者学校适应的影响：边缘型人格特征与亲社会行为的链式中介作用-付浩 (1)</option><option value="童年期创伤与边缘型人格障碍-赵天宇">童年期创伤与边缘型人格障碍-赵天宇 (5)</option><option value="笔记的方法">笔记的方法 (35)</option><option value="第二性（合卷本） (西蒙娜·德·波伏瓦作品系列)">第二性（合卷本） (西蒙娜·德·波伏瓦作品系列) (22)</option><option value="第五项修炼：学习型组织的艺术与实践">第五项修炼：学习型组织的艺术与实践 (1)</option><option value="策展行知.pdf">策展行知.pdf (14)</option><option value="简单心理">简单心理 (7)</option><option value="类型与原型 (约翰毕比) (Z-Library).pdf">类型与原型 (约翰毕比) (Z-Library).pdf (29)</option><option value="精灵墨丘利">精灵墨丘利 (1)</option><option value="精神分析诊断——理解人格结构">精神分析诊断——理解人格结构 (9)</option><option value="系统之美(湛庐经典）">系统之美(湛庐经典） (15)</option><option value="系统之美（全新升级版）">系统之美（全新升级版） (96)</option><option value="素食者【2024诺贝尔文学奖得主】">素食者【2024诺贝尔文学奖得主】 (1)</option><option value="纳瓦尔宝典">纳瓦尔宝典 (171)</option><option value="纷乱的心灵：注意力缺陷障碍的缘起和疗愈">纷乱的心灵：注意力缺陷障碍的缘起和疗愈 (2)</option><option value="纸的声音">纸的声音 (14)</option><option value="经济发展理论（果麦经典）">经济发展理论（果麦经典） (1)</option><option value="结婚由我">结婚由我 (2)</option><option value="编剧的艺术">编剧的艺术 (1)</option><option value="美丽古典">美丽古典 (4)</option><option value="羞辱创伤：最日常却最椎心的痛">羞辱创伤：最日常却最椎心的痛 (32)</option><option value="聪明的投资者（第4版，注疏点评版）">聪明的投资者（第4版，注疏点评版） (8)</option><option value="胜者思维">胜者思维 (29)</option><option value="胡思乱想消除指南：用认知行为策略走出情绪困境">胡思乱想消除指南：用认知行为策略走出情绪困境 (10)</option><option value="脂粉帝国：网络言情小说与女性话语政治">脂粉帝国：网络言情小说与女性话语政治 (72)</option><option value="自体心理学导论 ([美] 彼得·A. 莱塞姆（Pete_ (Z-Library)">自体心理学导论 ([美] 彼得·A. 莱塞姆（Pete_ (Z-Library) (31)</option><option value="自体的重建">自体的重建 (50)</option><option value="自信的力量">自信的力量 (83)</option><option value="自学大全">自学大全 (2)</option><option value="自愈与成长：荣格的生命故事">自愈与成长：荣格的生命故事 (3)</option><option value="自我决定的孤独：难以建立亲密感的社会 ([德]伊丽莎白·冯·塔登) (Z-Library)">自我决定的孤独：难以建立亲密感的社会 ([德]伊丽莎白·冯·塔登) (Z-Library) (7)</option><option value="自我囚禁的人：完美主义的心理成因与自我松绑">自我囚禁的人：完美主义的心理成因与自我松绑 (7)</option><option value="自我救赎：战胜复杂性创伤的行动指南">自我救赎：战胜复杂性创伤的行动指南 (19)</option><option value="自我的探寻：弗洛伊德与精神分析的诞生">自我的探寻：弗洛伊德与精神分析的诞生 (13)</option><option value="舞台生活四十年：梅兰芳回忆录（全两册）">舞台生活四十年：梅兰芳回忆录（全两册） (6)</option><option value="艺术与恐惧：才华是一种恐惧，但创作永远是一种努力 ([_ (Z-Library)">艺术与恐惧：才华是一种恐惧，但创作永远是一种努力 ([_ (Z-Library) (24)</option><option value="艺术与恐惧：才华是一种恐惧，但创作永远是一种努力 ([_ (z-library.sk, 1lib.sk, z-lib.sk)">艺术与恐惧：才华是一种恐惧，但创作永远是一种努力 ([_ (z-library.sk, 1lib.sk, z-lib.sk) (8)</option><option value="英雄之旅：约瑟夫·坎贝尔亲述他的生活与工作">英雄之旅：约瑟夫·坎贝尔亲述他的生活与工作 (10)</option><option value="荒原狼（果麦经典）">荒原狼（果麦经典） (8)</option><option value="菊与刀（果麦经典）">菊与刀（果麦经典） (1)</option><option value="蛤蟆先生去看心理医生">蛤蟆先生去看心理医生 (25)</option><option value="行为改造大脑">行为改造大脑 (9)</option><option value="被困住的聪慧：注意缺陷多动障碍的情绪问题 (托马斯·E_ (Z-Library)">被困住的聪慧：注意缺陷多动障碍的情绪问题 (托马斯·E_ (Z-Library) (77)</option><option value="被忽视的孩子：如何克服童年的情感忽视">被忽视的孩子：如何克服童年的情感忽视 (284)</option><option value="被讨厌的勇气：“自我启发之父”阿德勒的哲学课">被讨厌的勇气：“自我启发之父”阿德勒的哲学课 (68)</option><option value="观影疗心">观影疗心 (12)</option><option value="视觉语言：人人皆可表达的一种语言">视觉语言：人人皆可表达的一种语言 (1)</option><option value="认生的人：如何克服社交焦虑（对不起，我可能对人过敏。当代社恐青年自救指南！日本国家公共医疗系统推荐使用！日本亚马逊心理学长销榜单TOP1全球一亿社恐患者的自我训练手册）">认生的人：如何克服社交焦虑（对不起，我可能对人过敏。当代社恐青年自救指南！日本国家公共医疗系统推荐使用！日本亚马逊心理学长销榜单TOP1全球一亿社恐患者的自我训练手册） (15)</option><option value="认知觉醒：开启自我改变的原动力">认知觉醒：开启自我改变的原动力 (8)</option><option value="认识你真好：建立深度而成熟的人际关系">认识你真好：建立深度而成熟的人际关系 (194)</option><option value="让钱自己流进来：普通人打造不依赖工资的赚钱系统">让钱自己流进来：普通人打造不依赖工资的赚钱系统 (17)</option><option value="论语 ( 国学大师韩兆琦主编，白话全译 )">论语 ( 国学大师韩兆琦主编，白话全译 ) (11)</option><option value="论读书">论读书 (10)</option><option value="试论网络言情小说的美学特征-詹秀敏">试论网络言情小说的美学特征-詹秀敏 (4)</option><option value="读懂纳瓦尔：普通人如何不靠运气变富">读懂纳瓦尔：普通人如何不靠运气变富 (61)</option><option value="读透《守弱》：以退为进的不内耗哲学">读透《守弱》：以退为进的不内耗哲学 (3)</option><option value="贫穷的本质：我们为什么摆脱不了贫穷（修订版）">贫穷的本质：我们为什么摆脱不了贫穷（修订版） (1)</option><option value="贾想Ⅱ：贾樟柯电影手记（2008—2016）">贾想Ⅱ：贾樟柯电影手记（2008—2016） (1)</option><option value="资本论（全三卷） (卡尔·马克思,中共中央马克思恩格斯列宁斯大林著作编译局) (Z-Library)">资本论（全三卷） (卡尔·马克思,中共中央马克思恩格斯列宁斯大林著作编译局) (Z-Library) (1)</option><option value="资本论（纪念版）全三卷">资本论（纪念版）全三卷 (10)</option><option value="赢回专注力">赢回专注力 (3)</option><option value="走出人格陷阱">走出人格陷阱 (6)</option><option value="走出原生家庭创伤">走出原生家庭创伤 (26)</option><option value="走出心灵荒野 用表达性写作摆脱孤独与迷茫 (Pdg2P_ (Z-Library).pdf">走出心灵荒野 用表达性写作摆脱孤独与迷茫 (Pdg2P_ (Z-Library).pdf (1)</option><option value="走出情感虐待：远离关系中的羞耻感，重塑自信人生">走出情感虐待：远离关系中的羞耻感，重塑自信人生 (59)</option><option value="超越好奇">超越好奇 (14)</option><option value="跟纳瓦尔学赚钱—纳瓦尔投资宝典">跟纳瓦尔学赚钱—纳瓦尔投资宝典 (1)</option><option value="躁郁之心：我与躁郁症共处的30年（经典版）（上）">躁郁之心：我与躁郁症共处的30年（经典版）（上） (99)</option><option value="身体从未忘记：心理创伤疗愈中的大脑、心智和身体">身体从未忘记：心理创伤疗愈中的大脑、心智和身体 (2)</option><option value="转化抑郁：用创造力治愈心灵=Transforming_ (Z-Library)">转化抑郁：用创造力治愈心灵=Transforming_ (Z-Library) (13)</option><option value="边缘型人格障碍特质大学生心理危机的影响因素-舒童">边缘型人格障碍特质大学生心理危机的影响因素-舒童 (2)</option><option value="追忆似水年华（全集）">追忆似水年华（全集） (1)</option><option value="通往心灵自由之路">通往心灵自由之路 (41)</option><option value="逻辑思维与写作">逻辑思维与写作 (1)</option><option value="邓小平时代 [转换版] (傅高义) (Z-Library).pdf">邓小平时代 [转换版] (傅高义) (Z-Library).pdf (7)</option><option value="重塑大脑，重塑人生">重塑大脑，重塑人生 (5)</option><option value="重塑爱情：如何摆脱父权制对两性关系的影响">重塑爱情：如何摆脱父权制对两性关系的影响 (10)</option><option value="金字塔原理">金字塔原理 (16)</option><option value="金钥匙系列：体验奇妙的经济世界">金钥匙系列：体验奇妙的经济世界 (1)</option><option value="金钥匙系列：你应该知道的10种创富工具">金钥匙系列：你应该知道的10种创富工具 (1)</option><option value="金钱心理学：财富、人性和幸福的永恒真相">金钱心理学：财富、人性和幸福的永恒真相 (31)</option><option value="金钱档案">金钱档案 (65)</option><option value="金钱的艺术">金钱的艺术 (53)</option><option value="金钱铁律：亿万富翁养成手册">金钱铁律：亿万富翁养成手册 (29)</option><option value="镜子、父亲、女人与疯子：拉康的精神分析世界">镜子、父亲、女人与疯子：拉康的精神分析世界 (2)</option><option value="长期主义：关注短期业绩，更要投资长期增长">长期主义：关注短期业绩，更要投资长期增长 (1)</option><option value="阅读是安静的自我觉醒（果麦经典）">阅读是安静的自我觉醒（果麦经典） (7)</option><option value="隐墙（果麦经典）">隐墙（果麦经典） (2)</option><option value="隐形创伤：如何疗愈看不见的童年伤痛">隐形创伤：如何疗愈看不见的童年伤痛 (15)</option><option value="隐形攻击：如何避免成为情感暴力的受害者">隐形攻击：如何避免成为情感暴力的受害者 (1)</option><option value="雪球专刊·特别版：段永平投资问答录商业逻辑篇">雪球专刊·特别版：段永平投资问答录商业逻辑篇 (22)</option><option value="雪花写作法：10步写出一篇好小说">雪花写作法：10步写出一篇好小说 (17)</option><option value="零极限：创造健康、平静与财富的夏威夷疗法（全新修订本）">零极限：创造健康、平静与财富的夏威夷疗法（全新修订本） (5)</option><option value="零秒思考">零秒思考 (5)</option><option value="静静的顿河（全集）">静静的顿河（全集） (2)</option><option value="非暴力沟通">非暴力沟通 (160)</option><option value="饥饿的母爱：治愈母爱缺失带来的创伤">饥饿的母爱：治愈母爱缺失带来的创伤 (3)</option><option value="骆玉明古诗词课（读客三个圈经典文库）">骆玉明古诗词课（读客三个圈经典文库） (20)</option><option value="高功能焦虑：别再害怕真实的自己">高功能焦虑：别再害怕真实的自己 (89)</option><option value="高敏感HSP笔记">高敏感HSP笔记 (27)</option><option value="高敏感人士的幸福清单">高敏感人士的幸福清单 (3)</option><option value="高维智慧 : 发现你的内在成长力">高维智慧 : 发现你的内在成长力 (7)</option><option value="黑客与画家（10万册纪念版）">黑客与画家（10万册纪念版） (2)</option>
+    </select>
   </div>
+</div>
 
-  <!-- 卡片区域 -->
-  <div class="stage" id="stage">
-    <div class="card" id="card" style="display:none;">
-      <div class="card-book" id="cardBook"></div>
-      <div class="card-text" id="cardText"></div>
-      <div class="card-chapter" id="cardChapter"></div>
-      <div class="card-hint">点击卡片右侧/下方按钮切换</div>
-    </div>
-    <div class="empty" id="empty">加载中...</div>
+<!-- 卡片区域 -->
+<div class="stage" id="stage">
+  <div class="card" id="card" style="display:none;">
+    <div class="card-book" id="cardBook"></div>
+    <div class="card-text" id="cardText"></div>
+    <div class="card-chapter" id="cardChapter"></div>
+    <div class="card-hint">点击卡片右半部分或下方按钮切换下一张</div>
   </div>
+  <div class="empty" id="empty">加载中...</div>
+</div>
 
-  <!-- 左右按钮 -->
-  <div class="nav-btns">
-    <button class="nav-btn" id="prevBtn">‹ 上一张</button>
-    <button class="nav-btn" id="nextBtn">下一张 ›</button>
-  </div>
+<!-- 左右按钮 -->
+<div class="nav-btns">
+  <button class="nav-btn" id="prevBtn">‹ 上一张</button>
+  <button class="nav-btn" id="nextBtn">下一张 ›</button>
+</div>
 
-  <!-- 进度条 -->
-  <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+<!-- 进度条 -->
+<div class="progress"><div class="progress-bar" id="progressBar"></div></div>
 
-  <!-- 底部跳转栏 -->
-  <div class="jump-bar">
-    <span id="progressText">0 / 0</span>
-    <span class="jump-label">跳转</span>
-    <input type="number" id="jumpInput" min="1" placeholder="页" inputmode="numeric">
-    <span class="jump-hint">/ <span id="totalNum">0</span></span>
-    <button id="jumpBtn">Go</button>
-  </div>
-
+<!-- 底部跳转栏 -->
+<div class="jump-bar">
+  <span id="progressText">0 / 0</span>
+  <span class="jump-label">跳转</span>
+  <input type="number" id="jumpInput" min="1" placeholder="页" inputmode="numeric">
+  <span class="jump-hint">/ <span id="totalNum">0</span></span>
+  <button id="jumpBtn">Go</button>
 </div>
 
 <script>
@@ -332,7 +296,6 @@ function esc(s) {
   return d.innerHTML;
 }
 
-// Fisher-Yates 洗牌
 function shuffle(arr) {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
@@ -375,8 +338,7 @@ function render() {
   progressBar.style.width = ((index + 1) / shuffled.length * 100) + '%';
   progressText.textContent = (index + 1) + '/' + shuffled.length + ' · 第' + round + '轮';
   document.getElementById('totalNum').textContent = shuffled.length;
-  // 滚动到顶部
-  textEl.scrollTop = 0;
+  window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
 function next() {
@@ -400,7 +362,7 @@ function prev() {
   render();
 }
 
-// ============ 点击切换（右半屏下一张，左半屏上一张）============
+// 点击切换
 cardEl.addEventListener('click', function(e) {
   const rect = cardEl.getBoundingClientRect();
   const x = e.clientX - rect.left;
@@ -408,7 +370,7 @@ cardEl.addEventListener('click', function(e) {
   else next();
 });
 
-// ============ 按钮切换 ============
+// 按钮切换
 document.getElementById('prevBtn').addEventListener('click', function(e) {
   e.stopPropagation();
   prev();
@@ -418,8 +380,9 @@ document.getElementById('nextBtn').addEventListener('click', function(e) {
   next();
 });
 
-// ============ 滑动切换（增强版：在卡片内部监听，不影响输入框）============
+// 滑动切换（轻触滑动，不阻止默认滚动）
 let touchStartX = 0, touchStartY = 0, touchStartTime = 0, isSwiping = false;
+const stage = document.getElementById('stage');
 
 stage.addEventListener('touchstart', function(e) {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'BUTTON') return;
@@ -435,14 +398,14 @@ stage.addEventListener('touchend', function(e) {
   const dx = e.changedTouches[0].clientX - touchStartX;
   const dy = e.changedTouches[0].clientY - touchStartY;
   const dt = Date.now() - touchStartTime;
-  // 水平滑动距离 > 40px 且速度快
-  if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5 && dt < 600) {
+  // 明显水平滑动才翻页
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5 && dt < 600) {
     if (dx > 0) prev();
     else next();
   }
 }, {passive: true});
 
-// ============ 键盘切换 ============
+// 键盘切换
 document.addEventListener('keydown', function(e) {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
   if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'ArrowDown') {
@@ -453,23 +416,22 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ============ 防止系统返回手势退出页面 ============
-// 通过 pushState 注入虚拟历史记录，让返回手势先消耗它
 function pushHistoryGuard() {
-  try {
-    history.pushState({guard: true, idx: Date.now()}, '');
-  } catch(e) {}
+  try { history.pushState({guard: true, idx: Date.now()}, ''); } catch(e) {}
 }
+// 连续 push 多条，让返回手势留在本页
+pushHistoryGuard();
+pushHistoryGuard();
 pushHistoryGuard();
 
 window.addEventListener('popstate', function(e) {
-  // 用户触发了返回手势或按了返回键
-  // 重新注入虚拟记录，确保下一次返回仍然被拦截
   pushHistoryGuard();
-  // 返回手势 = 上一张卡片
-  prev();
+  pushHistoryGuard();
+  pushHistoryGuard();
+  prev(); // 返回手势切换上一张卡片
 });
 
-// ============ 顶部控制栏折叠 ============
+// 顶部控制栏折叠
 const toggleBtn = document.getElementById('toggleHeader');
 toggleBtn.addEventListener('click', function(e) {
   e.stopPropagation();
@@ -482,7 +444,7 @@ toggleBtn.addEventListener('click', function(e) {
   }
 });
 
-// ============ 跳转功能 ============
+// 跳转功能
 const jumpInput = document.getElementById('jumpInput');
 const jumpBtn = document.getElementById('jumpBtn');
 function doJump() {

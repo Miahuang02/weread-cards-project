@@ -52,24 +52,19 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
 
-html {
-  height: 100%;
-  /* 阻止系统手势的滑动返回/前进 */
-  overscroll-behavior-x: none;
-}
-
-body {
-  height: 100%;
+html, body {
+  min-height: 100%;
   font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", serif;
   background: #faf9f7;
   color: #2c2c2e;
   -webkit-font-smoothing: antialiased;
-  /* 关键：阻止整体页面滚动，但允许卡片内部滚动 */
-  overflow: hidden;
-  position: fixed;
-  width: 100%;
-  /* 撑满安全区域 */
-  padding-top: env(safe-area-inset-top, 0px);
+  overscroll-behavior-x: none;
+}
+
+body {
+  /* 允许整个页面自然滚动，避免 flexbox 内部滚动失效 */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 :root {
@@ -83,25 +78,15 @@ body {
   --shadow: 0 12px 40px rgba(108, 99, 255, 0.08), 0 4px 12px rgba(0,0,0,0.04);
 }
 
-/* ============ 页面布局：用 flexbox 撑满 ============ */
-.page {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
-}
-
 /* ============ 顶部控制栏 ============ */
 .header {
-  flex-shrink: 0;
-  background: rgba(250,249,247,0.92);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  position: sticky; top: 0; z-index: 10;
+  background: rgba(250,249,247,0.95);
   border-bottom: 1px solid var(--border);
-  padding: 8px 16px 10px;
+  padding: 10px 16px 12px;
   transition: all 0.3s ease;
   overflow: hidden;
-  max-height: 200px;
+  max-height: 220px;
 }
 .header.collapsed {
   max-height: 0;
@@ -111,49 +96,46 @@ body {
   opacity: 0;
 }
 .header h1 {
-  font-size:16px; font-weight:600; margin-bottom:8px;
+  font-size:16px; font-weight:600; margin-bottom:10px;
   font-family: -apple-system, "PingFang SC", sans-serif;
   letter-spacing: 0.5px;
   display: flex; align-items: center; justify-content: space-between;
 }
 .header h1 .toggle-btn {
-  font-size: 14px; font-weight: 400;
+  font-size: 13px; font-weight: 400;
   color: var(--accent); cursor: pointer;
   background: none; border: none;
   font-family: -apple-system, "PingFang SC", sans-serif;
 }
 .controls { display:flex; gap:8px; align-items:center; }
 .controls input[type=text] {
-  flex:1; padding:8px 14px; font-size:14px;
+  flex:1; padding:9px 14px; font-size:14px;
   border:1px solid var(--border); border-radius:12px;
   background:var(--card-bg); outline:none;
   font-family: -apple-system, "PingFang SC", sans-serif;
   min-width: 0;
 }
 .controls select {
-  padding:8px 12px; font-size:13px; max-width:42%;
+  padding:9px 12px; font-size:13px; max-width:42%;
   border:1px solid var(--border); border-radius:12px;
   background:var(--card-bg); color:var(--text);
   font-family: -apple-system, "PingFang SC", sans-serif;
   flex-shrink: 0;
 }
 
-/* ============ 卡片区域：flex:1 撑满剩余空间 ============ */
+/* ============ 卡片舞台 ============ */
 .stage {
-  flex: 1;
+  min-height: calc(100vh - 200px);
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
   justify-content: center;
-  padding: 12px 12px;
-  min-height: 0; /* 关键：允许 flex 子项缩小 */
-  overflow: hidden;
+  padding: 12px 12px 16px;
 }
 
 .card {
   width: 100%;
   max-width: 580px;
-  /* 用 flex:1 撑满高度，而不是固定高度 */
-  flex: 1;
+  min-height: calc(100vh - 240px);
   background: var(--card-bg);
   border-radius: 24px;
   box-shadow: var(--shadow);
@@ -167,54 +149,41 @@ body {
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
-  overflow: hidden;
   transition: transform 0.15s ease, opacity 0.2s ease;
 }
 .card:active { transform: scale(0.98); }
 
 .card-book {
-  flex-shrink: 0;
   font-size: 13px; color: var(--accent);
   font-weight: 500;
   font-family: -apple-system, "PingFang SC", sans-serif;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
   width: 100%;
 }
 
-/* 卡片正文：flex:1 占据中间空间，可滚动 */
 .card-text {
-  flex: 1;
   font-size: clamp(16px, 4.2vw, 24px);
   line-height: 1.75;
   color: var(--text);
   font-weight: 400;
   width: 100%;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
   letter-spacing: 0.3px;
   padding: 0 4px;
-  /* 关键：让文字区域可滚动但不会撑爆卡片 */
-  min-height: 0;
   word-break: break-word;
 }
-.card-text::-webkit-scrollbar { width: 3px; }
-.card-text::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-.card-text::-webkit-scrollbar-track { background: transparent; }
 
 .card-chapter {
-  flex-shrink: 0;
   font-size: 12px; color: var(--text-secondary);
   font-family: -apple-system, "PingFang SC", sans-serif;
-  margin-top: 16px;
+  margin-top: 18px;
   width: 100%;
 }
 
 .card-hint {
-  flex-shrink: 0;
   font-size: 10px; color: #d1d1d6;
   font-family: -apple-system, sans-serif;
   letter-spacing: 1px;
-  margin-top: 8px;
+  margin-top: 12px;
 }
 
 .empty {
@@ -223,17 +192,54 @@ body {
   padding: 40px;
 }
 
+/* ============ 左右翻页按钮 ============ */
+.nav-btns {
+  position: sticky; bottom: env(safe-area-inset-bottom, 0px); z-index: 9;
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px 12px;
+  gap: 12px;
+  background: linear-gradient(to top, rgba(250,249,247,1) 0%, rgba(250,249,247,0.92) 70%, rgba(250,249,247,0) 100%);
+}
+.nav-btn {
+  flex: 1;
+  padding: 11px 0;
+  border: none;
+  border-radius: 14px;
+  background: var(--card-bg);
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 500;
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.nav-btn:active { transform: scale(0.95); background: var(--accent); color: white; }
+
+/* ============ 进度条 ============ */
+.progress {
+  position: sticky; bottom: 0; z-index: 8;
+  height: 3px; background: rgba(0,0,0,0.04);
+}
+.progress-bar {
+  height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-light));
+  width: 0%; transition: width 0.3s ease;
+  border-radius: 0 3px 3px 0;
+}
+
 /* ============ 底部跳转栏 ============ */
 .jump-bar {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center; gap: 6px;
-  padding: 8px 16px;
-  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
-  background: rgba(250,249,247,0.92);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  padding: 10px 16px 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  background: rgba(250,249,247,0.95);
   border-top: 1px solid var(--border);
   font-size: 13px; color: var(--text-secondary);
   font-family: -apple-system, "PingFang SC", sans-serif;
@@ -260,94 +266,52 @@ body {
   cursor: pointer; font-weight: 500;
 }
 .jump-bar button:active { background: var(--accent-light); }
-
-/* ============ 左右翻页按钮（替代滑动手势的可靠方案）============ */
-.nav-btns {
-  flex-shrink: 0;
-  display: flex;
-  justify-content: space-between;
-  padding: 0 16px 4px;
-  gap: 16px;
-}
-.nav-btn {
-  flex: 1;
-  max-width: 120px;
-  padding: 10px 0;
-  border: none;
-  border-radius: 14px;
-  background: var(--card-bg);
-  color: var(--accent);
-  font-size: 15px;
-  font-weight: 500;
-  font-family: -apple-system, "PingFang SC", sans-serif;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-.nav-btn:active { transform: scale(0.95); background: var(--accent); color: white; }
-
-/* ============ 进度条 ============ */
-.progress {
-  flex-shrink: 0;
-  height: 3px; background: rgba(0,0,0,0.04);
-}
-.progress-bar {
-  height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-light));
-  width: 0%; transition: width 0.3s ease;
-  border-radius: 0 3px 3px 0;
-}
 </style>
 </head>
 <body>
-<div class="page">
 
-  <!-- 顶部控制栏 -->
-  <div class="header" id="header">
-    <h1>
-      <span>📚 划线卡片</span>
-      <button class="toggle-btn" id="toggleHeader">收起 ▲</button>
-    </h1>
-    <div class="controls">
-      <input type="text" id="search" placeholder="搜索划线内容...">
-      <select id="bookFilter">
-        <option value="">全部书籍</option>
-        __BOOKS_OPTIONS__
-      </select>
-    </div>
+<!-- 顶部控制栏 -->
+<div class="header" id="header">
+  <h1>
+    <span>📚 划线卡片</span>
+    <button class="toggle-btn" id="toggleHeader">收起 ▲</button>
+  </h1>
+  <div class="controls">
+    <input type="text" id="search" placeholder="搜索划线内容...">
+    <select id="bookFilter">
+      <option value="">全部书籍</option>
+      __BOOKS_OPTIONS__
+    </select>
   </div>
+</div>
 
-  <!-- 卡片区域 -->
-  <div class="stage" id="stage">
-    <div class="card" id="card" style="display:none;">
-      <div class="card-book" id="cardBook"></div>
-      <div class="card-text" id="cardText"></div>
-      <div class="card-chapter" id="cardChapter"></div>
-      <div class="card-hint">点击卡片右侧/下方按钮切换</div>
-    </div>
-    <div class="empty" id="empty">加载中...</div>
+<!-- 卡片区域 -->
+<div class="stage" id="stage">
+  <div class="card" id="card" style="display:none;">
+    <div class="card-book" id="cardBook"></div>
+    <div class="card-text" id="cardText"></div>
+    <div class="card-chapter" id="cardChapter"></div>
+    <div class="card-hint">点击卡片右半部分或下方按钮切换下一张</div>
   </div>
+  <div class="empty" id="empty">加载中...</div>
+</div>
 
-  <!-- 左右按钮 -->
-  <div class="nav-btns">
-    <button class="nav-btn" id="prevBtn">‹ 上一张</button>
-    <button class="nav-btn" id="nextBtn">下一张 ›</button>
-  </div>
+<!-- 左右按钮 -->
+<div class="nav-btns">
+  <button class="nav-btn" id="prevBtn">‹ 上一张</button>
+  <button class="nav-btn" id="nextBtn">下一张 ›</button>
+</div>
 
-  <!-- 进度条 -->
-  <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+<!-- 进度条 -->
+<div class="progress"><div class="progress-bar" id="progressBar"></div></div>
 
-  <!-- 底部跳转栏 -->
-  <div class="jump-bar">
-    <span id="progressText">0 / 0</span>
-    <span class="jump-label">跳转</span>
-    <input type="number" id="jumpInput" min="1" placeholder="页" inputmode="numeric">
-    <span class="jump-hint">/ <span id="totalNum">0</span></span>
-    <button id="jumpBtn">Go</button>
-  </div>
-
+<!-- 底部跳转栏 -->
+<div class="jump-bar">
+  <span id="progressText">0 / 0</span>
+  <span class="jump-label">跳转</span>
+  <input type="number" id="jumpInput" min="1" placeholder="页" inputmode="numeric">
+  <span class="jump-hint">/ <span id="totalNum">0</span></span>
+  <button id="jumpBtn">Go</button>
 </div>
 
 <script>
@@ -373,7 +337,6 @@ function esc(s) {
   return d.innerHTML;
 }
 
-// Fisher-Yates 洗牌
 function shuffle(arr) {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
@@ -416,8 +379,7 @@ function render() {
   progressBar.style.width = ((index + 1) / shuffled.length * 100) + '%';
   progressText.textContent = (index + 1) + '/' + shuffled.length + ' · 第' + round + '轮';
   document.getElementById('totalNum').textContent = shuffled.length;
-  // 滚动到顶部
-  textEl.scrollTop = 0;
+  window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
 function next() {
@@ -441,7 +403,7 @@ function prev() {
   render();
 }
 
-// ============ 点击切换（右半屏下一张，左半屏上一张）============
+// 点击切换
 cardEl.addEventListener('click', function(e) {
   const rect = cardEl.getBoundingClientRect();
   const x = e.clientX - rect.left;
@@ -449,7 +411,7 @@ cardEl.addEventListener('click', function(e) {
   else next();
 });
 
-// ============ 按钮切换 ============
+// 按钮切换
 document.getElementById('prevBtn').addEventListener('click', function(e) {
   e.stopPropagation();
   prev();
@@ -459,8 +421,9 @@ document.getElementById('nextBtn').addEventListener('click', function(e) {
   next();
 });
 
-// ============ 滑动切换（增强版：在卡片内部监听，不影响输入框）============
+// 滑动切换（轻触滑动，不阻止默认滚动）
 let touchStartX = 0, touchStartY = 0, touchStartTime = 0, isSwiping = false;
+const stage = document.getElementById('stage');
 
 stage.addEventListener('touchstart', function(e) {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'BUTTON') return;
@@ -476,14 +439,14 @@ stage.addEventListener('touchend', function(e) {
   const dx = e.changedTouches[0].clientX - touchStartX;
   const dy = e.changedTouches[0].clientY - touchStartY;
   const dt = Date.now() - touchStartTime;
-  // 水平滑动距离 > 40px 且速度快
-  if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5 && dt < 600) {
+  // 明显水平滑动才翻页
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5 && dt < 600) {
     if (dx > 0) prev();
     else next();
   }
 }, {passive: true});
 
-// ============ 键盘切换 ============
+// 键盘切换
 document.addEventListener('keydown', function(e) {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
   if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'ArrowDown') {
@@ -494,23 +457,22 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ============ 防止系统返回手势退出页面 ============
-// 通过 pushState 注入虚拟历史记录，让返回手势先消耗它
 function pushHistoryGuard() {
-  try {
-    history.pushState({guard: true, idx: Date.now()}, '');
-  } catch(e) {}
+  try { history.pushState({guard: true, idx: Date.now()}, ''); } catch(e) {}
 }
+// 连续 push 多条，让返回手势留在本页
+pushHistoryGuard();
+pushHistoryGuard();
 pushHistoryGuard();
 
 window.addEventListener('popstate', function(e) {
-  // 用户触发了返回手势或按了返回键
-  // 重新注入虚拟记录，确保下一次返回仍然被拦截
   pushHistoryGuard();
-  // 返回手势 = 上一张卡片
-  prev();
+  pushHistoryGuard();
+  pushHistoryGuard();
+  prev(); // 返回手势切换上一张卡片
 });
 
-// ============ 顶部控制栏折叠 ============
+// 顶部控制栏折叠
 const toggleBtn = document.getElementById('toggleHeader');
 toggleBtn.addEventListener('click', function(e) {
   e.stopPropagation();
@@ -523,7 +485,7 @@ toggleBtn.addEventListener('click', function(e) {
   }
 });
 
-// ============ 跳转功能 ============
+// 跳转功能
 const jumpInput = document.getElementById('jumpInput');
 const jumpBtn = document.getElementById('jumpBtn');
 function doJump() {
