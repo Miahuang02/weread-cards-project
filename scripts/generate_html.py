@@ -43,11 +43,35 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>微信读书划线卡片</title>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-html, body { height: 100%; overflow: hidden; }
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+
+html {
+  height: 100%;
+  /* 阻止系统手势的滑动返回/前进 */
+  overscroll-behavior-x: none;
+}
+
+body {
+  height: 100%;
+  font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", serif;
+  background: #faf9f7;
+  color: #2c2c2e;
+  -webkit-font-smoothing: antialiased;
+  /* 关键：阻止整体页面滚动，但允许卡片内部滚动 */
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  /* 撑满安全区域 */
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
 :root {
   --bg: #faf9f7;
   --card-bg: #ffffff;
@@ -58,125 +82,155 @@ html, body { height: 100%; overflow: hidden; }
   --border: #e5e5ea;
   --shadow: 0 12px 40px rgba(108, 99, 255, 0.08), 0 4px 12px rgba(0,0,0,0.04);
 }
-body {
-  font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", serif;
-  background: var(--bg);
-  color: var(--text);
-  -webkit-tap-highlight-color: transparent;
-  touch-action: none; /* 防止浏览器默认滑动返回/前进 */
-  overscroll-behavior: none;
-  -webkit-font-smoothing: antialiased;
+
+/* ============ 页面布局：用 flexbox 撑满 ============ */
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
 }
-/* 顶部控制栏 */
+
+/* ============ 顶部控制栏 ============ */
 .header {
-  position: fixed; top:0; left:0; right:0; z-index:10;
-  background: rgba(250,249,247,0.88);
+  flex-shrink: 0;
+  background: rgba(250,249,247,0.92);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   border-bottom: 1px solid var(--border);
-  padding: 12px 16px 10px;
-  transform: translateY(0);
-  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  padding: 8px 16px 10px;
+  transition: all 0.3s ease;
+  overflow: hidden;
+  max-height: 200px;
 }
-.header.hidden { transform: translateY(-100%); }
+.header.collapsed {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+  opacity: 0;
+}
 .header h1 {
-  font-size:17px; font-weight:600; margin-bottom:10px;
+  font-size:16px; font-weight:600; margin-bottom:8px;
   font-family: -apple-system, "PingFang SC", sans-serif;
   letter-spacing: 0.5px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.header h1 .toggle-btn {
+  font-size: 14px; font-weight: 400;
+  color: var(--accent); cursor: pointer;
+  background: none; border: none;
+  font-family: -apple-system, "PingFang SC", sans-serif;
 }
 .controls { display:flex; gap:8px; align-items:center; }
 .controls input[type=text] {
-  flex:1; padding:9px 14px; font-size:14px;
+  flex:1; padding:8px 14px; font-size:14px;
   border:1px solid var(--border); border-radius:12px;
   background:var(--card-bg); outline:none;
   font-family: -apple-system, "PingFang SC", sans-serif;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.controls input[type=text]:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(108,99,255,0.1);
+  min-width: 0;
 }
 .controls select {
-  padding:9px 12px; font-size:13px; max-width:45%;
+  padding:8px 12px; font-size:13px; max-width:42%;
   border:1px solid var(--border); border-radius:12px;
   background:var(--card-bg); color:var(--text);
   font-family: -apple-system, "PingFang SC", sans-serif;
+  flex-shrink: 0;
 }
-/* 全屏卡片容器 */
+
+/* ============ 卡片区域：flex:1 撑满剩余空间 ============ */
 .stage {
-  position: fixed; top:0; left:0; width:100%; height:100%;
-  display: flex; align-items: center; justify-content: center;
-  padding: 90px 16px 100px;
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 12px 12px;
+  min-height: 0; /* 关键：允许 flex 子项缩小 */
+  overflow: hidden;
 }
+
 .card {
-  width: 100%; max-width: 600px;
-  height: auto; max-height: 100%;
-  min-height: 50vh;
+  width: 100%;
+  max-width: 580px;
+  /* 用 flex:1 撑满高度，而不是固定高度 */
+  flex: 1;
   background: var(--card-bg);
-  border-radius: 28px;
+  border-radius: 24px;
   box-shadow: var(--shadow);
-  padding: 48px 28px 60px;
-  display: flex; flex-direction: column;
-  justify-content: center; align-items: center;
+  padding: 40px 24px 36px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   text-align: center;
   position: relative;
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
-  transition: transform 0.15s ease, opacity 0.2s ease;
   overflow: hidden;
+  transition: transform 0.15s ease, opacity 0.2s ease;
 }
-.card:active { transform: scale(0.97); }
-.card.fade-out { opacity: 0; transform: scale(0.95); }
+.card:active { transform: scale(0.98); }
+
+.card-book {
+  flex-shrink: 0;
+  font-size: 13px; color: var(--accent);
+  font-weight: 500;
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  margin-bottom: 16px;
+  width: 100%;
+}
+
+/* 卡片正文：flex:1 占据中间空间，可滚动 */
 .card-text {
-  font-size: clamp(17px, 4.8vw, 26px);
-  line-height: 1.7;
+  flex: 1;
+  font-size: clamp(16px, 4.2vw, 24px);
+  line-height: 1.75;
   color: var(--text);
   font-weight: 400;
   width: 100%;
-  max-height: calc(100vh - 260px);
   overflow-y: auto;
-  letter-spacing: 0.5px;
-  padding: 10px 0;
+  -webkit-overflow-scrolling: touch;
+  letter-spacing: 0.3px;
+  padding: 0 4px;
+  /* 关键：让文字区域可滚动但不会撑爆卡片 */
+  min-height: 0;
+  word-break: break-word;
 }
 .card-text::-webkit-scrollbar { width: 3px; }
 .card-text::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-.card-book {
-  position: absolute; top: 24px; left: 0; right: 0;
-  font-size: 13px; color: var(--accent);
-  font-weight: 500; padding: 0 24px;
-  font-family: -apple-system, "PingFang SC", sans-serif;
-}
+.card-text::-webkit-scrollbar-track { background: transparent; }
+
 .card-chapter {
-  position: absolute; bottom: 24px; left: 0; right: 0;
+  flex-shrink: 0;
   font-size: 12px; color: var(--text-secondary);
   font-family: -apple-system, "PingFang SC", sans-serif;
+  margin-top: 16px;
+  width: 100%;
 }
+
 .card-hint {
-  position: absolute; bottom: 50px; left: 0; right: 0;
+  flex-shrink: 0;
   font-size: 10px; color: #d1d1d6;
   font-family: -apple-system, sans-serif;
   letter-spacing: 1px;
+  margin-top: 8px;
 }
+
 .empty {
   text-align:center; color:var(--text-secondary); font-size:15px;
   font-family: -apple-system, "PingFang SC", sans-serif;
+  padding: 40px;
 }
-/* 底部进度条 */
-.progress {
-  position: fixed; bottom:0; left:0; right:0; z-index:9;
-  height: 3px; background: rgba(0,0,0,0.04);
-}
-.progress-bar {
-  height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-light));
-  width: 0%; transition: width 0.3s ease;
-  border-radius: 0 3px 3px 0;
-}
+
+/* ============ 底部跳转栏 ============ */
 .jump-bar {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index:10;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 10px 16px;
-  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center; gap: 6px;
+  padding: 8px 16px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
   background: rgba(250,249,247,0.92);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
@@ -186,90 +240,121 @@ body {
 }
 .jump-bar #progressText {
   color: var(--accent); font-weight: 600;
-  min-width: 100px; text-align: center;
+  min-width: 90px; text-align: center;
   font-variant-numeric: tabular-nums;
+  font-size: 12px;
 }
-.jump-label { font-size: 12px; }
+.jump-label { font-size: 11px; }
 .jump-bar input[type=number] {
-  width: 64px; padding: 5px 8px; font-size: 14px;
+  width: 56px; padding: 5px 8px; font-size: 14px;
   border: 1px solid var(--border); border-radius: 10px;
   text-align: center; outline: none;
   background: var(--card-bg);
   font-family: -apple-system, "PingFang SC", sans-serif;
-  transition: border-color 0.2s, box-shadow 0.2s;
 }
-.jump-bar input[type=number]:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(108,99,255,0.1);
-}
-.jump-hint { font-size: 12px; }
+.jump-hint { font-size: 11px; }
 .jump-bar button {
-  padding: 5px 14px; font-size: 13px;
+  padding: 5px 12px; font-size: 13px;
   border: none; border-radius: 10px;
   background: var(--accent); color: white;
   cursor: pointer; font-weight: 500;
-  transition: background 0.2s;
 }
 .jump-bar button:active { background: var(--accent-light); }
-/* 顶部切换按钮 */
-.top-btns {
-  position: fixed; top: 12px; right: 16px; z-index:11;
-  display: flex; gap: 8px;
+
+/* ============ 左右翻页按钮（替代滑动手势的可靠方案）============ */
+.nav-btns {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 16px 4px;
+  gap: 16px;
 }
-.top-btns button {
-  width: 36px; height: 36px; border-radius: 50%;
-  border: none; background: rgba(255,255,255,0.85);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  font-size: 16px; color: var(--text-secondary);
-  display: flex; align-items: center; justify-content: center;
+.nav-btn {
+  flex: 1;
+  max-width: 120px;
+  padding: 10px 0;
+  border: none;
+  border-radius: 14px;
+  background: var(--card-bg);
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 500;
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   cursor: pointer;
-  transition: transform 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
-.top-btns button:active { transform: scale(0.9); }
+.nav-btn:active { transform: scale(0.95); background: var(--accent); color: white; }
+
+/* ============ 进度条 ============ */
+.progress {
+  flex-shrink: 0;
+  height: 3px; background: rgba(0,0,0,0.04);
+}
+.progress-bar {
+  height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-light));
+  width: 0%; transition: width 0.3s ease;
+  border-radius: 0 3px 3px 0;
+}
 </style>
 </head>
 <body>
-<div class="header" id="header">
-  <h1>📚 划线卡片</h1>
-  <div class="controls">
-    <input type="text" id="search" placeholder="搜索划线内容...">
-    <select id="bookFilter">
-      <option value="">全部书籍</option>
-      __BOOKS_OPTIONS__
-    </select>
+<div class="page">
+
+  <!-- 顶部控制栏 -->
+  <div class="header" id="header">
+    <h1>
+      <span>📚 划线卡片</span>
+      <button class="toggle-btn" id="toggleHeader">收起 ▲</button>
+    </h1>
+    <div class="controls">
+      <input type="text" id="search" placeholder="搜索划线内容...">
+      <select id="bookFilter">
+        <option value="">全部书籍</option>
+        __BOOKS_OPTIONS__
+      </select>
+    </div>
   </div>
-</div>
 
-<div class="top-btns">
-  <button id="toggleHeader" title="显示/隐藏控制栏">⚙️</button>
-</div>
-
-<div class="stage" id="stage">
-  <div class="card" id="card" style="display:none;">
-    <div class="card-book" id="cardBook"></div>
-    <div class="card-text" id="cardText"></div>
-    <div class="card-chapter" id="cardChapter"></div>
-    <div class="card-hint">点击切换下一张 · 左滑右滑翻看 · 随机顺序</div>
+  <!-- 卡片区域 -->
+  <div class="stage" id="stage">
+    <div class="card" id="card" style="display:none;">
+      <div class="card-book" id="cardBook"></div>
+      <div class="card-text" id="cardText"></div>
+      <div class="card-chapter" id="cardChapter"></div>
+      <div class="card-hint">点击卡片右侧/下方按钮切换</div>
+    </div>
+    <div class="empty" id="empty">加载中...</div>
   </div>
-  <div class="empty" id="empty">加载中...</div>
-</div>
 
-<div class="progress" id="progress"><div class="progress-bar" id="progressBar"></div></div>
-<div class="jump-bar">
-  <span id="progressText">0 / 0</span>
-  <span class="jump-label">跳转:</span>
-  <input type="number" id="jumpInput" min="1" placeholder="页码" inputmode="numeric">
-  <span class="jump-hint">/ <span id="totalNum">0</span></span>
-  <button id="jumpBtn">Go</button>
+  <!-- 左右按钮 -->
+  <div class="nav-btns">
+    <button class="nav-btn" id="prevBtn">‹ 上一张</button>
+    <button class="nav-btn" id="nextBtn">下一张 ›</button>
+  </div>
+
+  <!-- 进度条 -->
+  <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+
+  <!-- 底部跳转栏 -->
+  <div class="jump-bar">
+    <span id="progressText">0 / 0</span>
+    <span class="jump-label">跳转</span>
+    <input type="number" id="jumpInput" min="1" placeholder="页" inputmode="numeric">
+    <span class="jump-hint">/ <span id="totalNum">0</span></span>
+    <button id="jumpBtn">Go</button>
+  </div>
+
 </div>
 
 <script>
 const ALL_CARDS = __CARDS_JSON__;
-let shuffled = [];   // 当前轮次的随机顺序
-let index = 0;       // 当前在 shuffled 中的位置
-let round = 1;       // 当前是第几轮
+let shuffled = [];
+let index = 0;
+let round = 1;
 
 const header = document.getElementById('header');
 const cardEl = document.getElementById('card');
@@ -288,7 +373,7 @@ function esc(s) {
   return d.innerHTML;
 }
 
-// Fisher-Yates 洗牌算法
+// Fisher-Yates 洗牌
 function shuffle(arr) {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
@@ -319,6 +404,7 @@ function render() {
     emptyEl.textContent = '没有匹配的划线';
     progressBar.style.width = '0%';
     progressText.textContent = '0 / 0';
+    document.getElementById('totalNum').textContent = '0';
     return;
   }
   cardEl.style.display = 'flex';
@@ -328,14 +414,15 @@ function render() {
   textEl.innerHTML = esc(c.text);
   chapterEl.innerHTML = esc(c.chapter || '');
   progressBar.style.width = ((index + 1) / shuffled.length * 100) + '%';
-  progressText.textContent = (index + 1) + ' / ' + shuffled.length + ' · 第' + round + '轮';
+  progressText.textContent = (index + 1) + '/' + shuffled.length + ' · 第' + round + '轮';
   document.getElementById('totalNum').textContent = shuffled.length;
+  // 滚动到顶部
+  textEl.scrollTop = 0;
 }
 
 function next() {
   if (shuffled.length === 0) return;
   index++;
-  // 看完一轮，重新洗牌开始新一轮
   if (index >= shuffled.length) {
     shuffled = shuffle(shuffled);
     index = 0;
@@ -347,7 +434,6 @@ function next() {
 function prev() {
   if (shuffled.length === 0) return;
   index--;
-  // 回到上一轮的最后一张
   if (index < 0) {
     round = Math.max(1, round - 1);
     index = shuffled.length - 1;
@@ -355,7 +441,7 @@ function prev() {
   render();
 }
 
-// 点击切换
+// ============ 点击切换（右半屏下一张，左半屏上一张）============
 cardEl.addEventListener('click', function(e) {
   const rect = cardEl.getBoundingClientRect();
   const x = e.clientX - rect.left;
@@ -363,45 +449,43 @@ cardEl.addEventListener('click', function(e) {
   else next();
 });
 
-// 滑动切换（监听整个页面，防止浏览器默认返回）
-let touchStartX = 0;
-let touchStartY = 0;
-let touchStartTime = 0;
-let isTouching = false;
+// ============ 按钮切换 ============
+document.getElementById('prevBtn').addEventListener('click', function(e) {
+  e.stopPropagation();
+  prev();
+});
+document.getElementById('nextBtn').addEventListener('click', function(e) {
+  e.stopPropagation();
+  next();
+});
 
-document.addEventListener('touchstart', function(e) {
-  // 跳过输入框上的滑动
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+// ============ 滑动切换（增强版：在卡片内部监听，不影响输入框）============
+let touchStartX = 0, touchStartY = 0, touchStartTime = 0, isSwiping = false;
+
+stage.addEventListener('touchstart', function(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'BUTTON') return;
   touchStartX = e.touches[0].clientX;
   touchStartY = e.touches[0].clientY;
   touchStartTime = Date.now();
-  isTouching = true;
-}, {passive: false});
+  isSwiping = true;
+}, {passive: true});
 
-document.addEventListener('touchmove', function(e) {
-  if (!isTouching) return;
-  const dx = e.touches[0].clientX - touchStartX;
-  const dy = e.touches[0].clientY - touchStartY;
-  // 水平滑动时阻止默认行为（防止浏览器返回/前进）
-  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
-    e.preventDefault();
-  }
-}, {passive: false});
-
-document.addEventListener('touchend', function(e) {
-  if (!isTouching) return;
-  isTouching = false;
+stage.addEventListener('touchend', function(e) {
+  if (!isSwiping) return;
+  isSwiping = false;
   const dx = e.changedTouches[0].clientX - touchStartX;
   const dy = e.changedTouches[0].clientY - touchStartY;
   const dt = Date.now() - touchStartTime;
-  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50 && dt < 500) {
+  // 水平滑动距离 > 40px 且速度快
+  if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5 && dt < 600) {
     if (dx > 0) prev();
     else next();
   }
-}, {passive: false});
+}, {passive: true});
 
-// 键盘切换
+// ============ 键盘切换 ============
 document.addEventListener('keydown', function(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
   if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'ArrowDown') {
     e.preventDefault(); next();
   } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
@@ -409,13 +493,37 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-// 顶部控制栏显隐
-document.getElementById('toggleHeader').addEventListener('click', function(e) {
-  e.stopPropagation();
-  header.classList.toggle('hidden');
+// ============ 防止系统返回手势退出页面 ============
+// 通过 pushState 注入虚拟历史记录，让返回手势先消耗它
+function pushHistoryGuard() {
+  try {
+    history.pushState({guard: true, idx: Date.now()}, '');
+  } catch(e) {}
+}
+pushHistoryGuard();
+
+window.addEventListener('popstate', function(e) {
+  // 用户触发了返回手势或按了返回键
+  // 重新注入虚拟记录，确保下一次返回仍然被拦截
+  pushHistoryGuard();
+  // 返回手势 = 上一张卡片
+  prev();
 });
 
-// 跳转功能
+// ============ 顶部控制栏折叠 ============
+const toggleBtn = document.getElementById('toggleHeader');
+toggleBtn.addEventListener('click', function(e) {
+  e.stopPropagation();
+  if (header.classList.contains('collapsed')) {
+    header.classList.remove('collapsed');
+    toggleBtn.textContent = '收起 ▲';
+  } else {
+    header.classList.add('collapsed');
+    toggleBtn.textContent = '展开 ▼';
+  }
+});
+
+// ============ 跳转功能 ============
 const jumpInput = document.getElementById('jumpInput');
 const jumpBtn = document.getElementById('jumpBtn');
 function doJump() {
@@ -432,6 +540,8 @@ jumpInput.addEventListener('keydown', function(e) {
   e.stopPropagation();
 });
 jumpInput.addEventListener('click', function(e) { e.stopPropagation(); });
+searchBox.addEventListener('click', function(e) { e.stopPropagation(); });
+bookFilter.addEventListener('click', function(e) { e.stopPropagation(); });
 
 searchBox.addEventListener('input', updateCards);
 bookFilter.addEventListener('change', updateCards);
