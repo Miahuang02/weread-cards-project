@@ -1,116 +1,145 @@
 #!/usr/bin/env python3
 """
 generate_pdf.py
-读取 highlights.json，生成 A4 多卡片 PDF（2×3=6张/页，带裁剪虚线）
+读取 highlights.json，生成适合打印的 HTML，再用 weasyprint 转为 A4 PDF。
+每页 6 张卡片（2列 × 3行），带裁剪虚线。
 """
 import json
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFont
+from weasyprint import HTML, CSS
 
 DATA_FILE = Path(__file__).parent.parent / "data" / "highlights.json"
-OUTPUT_FILE = Path(__file__).parent.parent / "highlights.pdf"
+OUTPUT_HTML = Path(__file__).parent.parent / "print.html"
+OUTPUT_PDF = Path(__file__).parent.parent / "highlights.pdf"
 
-DPI = 300
-PAGE_W = int(210 / 25.4 * DPI)
-PAGE_H = int(297 / 25.4 * DPI)
-MARGIN = int(8 / 25.4 * DPI)
-GAP = int(3 / 25.4 * DPI)
-COLS, ROWS = 2, 3
+# A4 210×297mm，页边距 8mm，可用 194×281mm
+# 2列3行，间隙 3mm：
+# 卡片宽 = (194 - 3) / 2 = 95.5mm
+# 卡片高 = (281 - 6) / 3 = 91.67mm
+CARD_W = 95.5
+CARD_H = 91.67
+GAP = 3
+MARGIN = 8
+
+CSS_STYLE = f"""
+@page {{
+    size: A4;
+    margin: {MARGIN}mm;
+}}
+* {{
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}}
+body {{
+    font-family: "Noto Sans CJK SC", "Source Han Sans SC", "WenQuanYi Micro Hei", "Microsoft YaHei", sans-serif;
+    color: #222;
+}}
+.page {{
+    width: {CARD_W * 2 + GAP}mm;
+    height: {CARD_H * 3 + GAP * 2}mm;
+    position: relative;
+    display: grid;
+    grid-template-columns: {CARD_W}mm {CARD_W}mm;
+    grid-template-rows: {CARD_H}mm {CARD_H}mm {CARD_H}mm;
+    gap: {GAP}mm;
+}}
+.card {{
+    width: {CARD_W}mm;
+    height: {CARD_H}mm;
+    border: 0.3pt solid #999;
+    padding: 5mm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 11pt;
+    line-height: 1.6;
+    overflow: hidden;
+    word-break: break-word;
+}}
+.crop-line-v {{
+    position: absolute;
+    top: -{MARGIN - 2}mm;
+    bottom: -{MARGIN - 2}mm;
+    width: 0;
+    border-left: 0.5pt dashed #bbb;
+}}
+.crop-line-h {{
+    position: absolute;
+    left: -{MARGIN - 2}mm;
+    right: -{MARGIN - 2}mm;
+    height: 0;
+    border-top: 0.5pt dashed #bbb;
+}}
+"""
 
 
-def find_font(size):
-    candidates = [
-        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-        "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
-    ]
-    for p in candidates:
-        try:
-            return ImageFont.truetype(p, size)
-        except Exception:
-            pass
-    return ImageFont.load_default()
+def escape_html(text):
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def wrap_text(draw, text, font, max_w):
-    lines, current = [], ""
-    for ch in text:
-        test = current + ch
-        if draw.textbbox((0,0), test, font=font)[2] > max_w and current:
-            lines.append(current)
-            current = ch
-        else:
-            current = test
-    if current:
-        lines.append(current)
-    return lines
+def generate(highlights):
+    cards = [h["text"] for h in highlights if h.get("text")]
+    per_page = 6
+    pages_html = []
 
+    # 裁剪线位置
+    v_pos = CARD_W + GAP / 2  # 列中线
+    h_pos1 = CARD_H + GAP / 2
+    h_pos2 = CARD_H * 2 + GAP * 1.5
 
-def render_card(text, w, h):
-    img = Image.new("RGB", (w, h), "white")
-    draw = ImageDraw.Draw(img)
-    draw.rectangle([(0,0),(w-1,h-1)], outline="#999999", width=2)
-    pad = int(8 / 25.4 * DPI)
-    max_w, max_h = w - 2*pad, h - 2*pad
-    font_size = 42
-    while font_size >= 22:
-        font = find_font(font_size)
-        line_h = int(font_size * 1.5)
-        lines = wrap_text(draw, text, font, max_w)
-        if len(lines) * line_h <= max_h:
-            break
-        font_size -= 2
-    font = find_font(font_size)
-    line_h = int(font_size * 1.5)
-    lines = wrap_text(draw, text, font, max_w)
-    while len(lines) * line_h > max_h and lines:
-        lines.pop()
-    if lines:
-        lines[-1] = lines[-1][:-2] + "…"
-    total_h = len(lines) * line_h
-    start_y = (h - total_h) // 2 + font_size // 2
-    for i, line in enumerate(lines):
-        tw = draw.textbbox((0,0), line, font=font)[2]
-        draw.text(((w-tw)//2, start_y + i*line_h), line, fill="#222222", font=font)
-    return img
+    for i in range(0, len(cards), per_page):
+        page_cards = cards[i:i + per_page]
+        while len(page_cards) < per_page:
+            page_cards.append("")
 
+        cards_html = "\n".join(
+            f'<div class="card">{escape_html(text)}</div>'
+            for text in page_cards
+        )
 
-def render_page(highlights):
-    page = Image.new("RGB", (PAGE_W, PAGE_H), "white")
-    draw = ImageDraw.Draw(page)
-    cw = (PAGE_W - 2*MARGIN - (COLS-1)*GAP) // COLS
-    ch = (PAGE_H - 2*MARGIN - (ROWS-1)*GAP) // ROWS
-    for i, text in enumerate(highlights[:COLS*ROWS]):
-        col, row = i % COLS, i // COLS
-        x = MARGIN + col * (cw + GAP)
-        y = MARGIN + row * (ch + GAP)
-        page.paste(render_card(text, cw, ch), (x, y))
-    # 裁剪虚线
-    for i in range(1, COLS):
-        x = MARGIN + i*cw + (i-1)*GAP + GAP//2
-        for y in range(MARGIN, PAGE_H-MARGIN, 8):
-            draw.line([(x,y),(x,min(y+4,PAGE_H-MARGIN))], fill="#bbb", width=2)
-    for i in range(1, ROWS):
-        y = MARGIN + i*ch + (i-1)*GAP + GAP//2
-        for x in range(MARGIN, PAGE_W-MARGIN, 8):
-            draw.line([(x,y),(min(x+4,PAGE_W-MARGIN),y)], fill="#bbb", width=2)
-    return page
+        lines_html = f"""
+            <div class="crop-line-v" style="left:{v_pos}mm;"></div>
+            <div class="crop-line-h" style="top:{h_pos1}mm;"></div>
+            <div class="crop-line-h" style="top:{h_pos2}mm;"></div>
+        """
+
+        pages_html.append(
+            f'<div class="page">{lines_html}{cards_html}</div>'
+        )
+
+    full_html = f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>微信读书划线卡片</title>
+<style>{CSS_STYLE}</style>
+</head>
+<body>
+{''.join(pages_html)}
+</body>
+</html>"""
+    return full_html
 
 
 def main():
     if not DATA_FILE.exists():
         print("未找到 highlights.json，跳过PDF生成")
         return
+
     with open(DATA_FILE, "r", encoding="utf-8") as f:
         highlights = json.load(f)
-    texts = [h["text"] for h in highlights if h.get("text")]
-    per_page = COLS * ROWS
-    pages = [render_page(texts[i:i+per_page]) for i in range(0, len(texts), per_page)]
-    if pages:
-        pages[0].save(OUTPUT_FILE, save_all=True, append_images=pages[1:],
-                      resolution=DPI, quality=95)
-        print(f"已生成PDF: {OUTPUT_FILE}（{len(texts)}条划线，{len(pages)}页）")
-    else:
+
+    if not highlights:
         print("无划线数据，跳过PDF生成")
+        return
+
+    html = generate(highlights)
+    OUTPUT_HTML.write_text(html, encoding="utf-8")
+
+    HTML(string=html).write_pdf(str(OUTPUT_PDF))
+    print(f"已生成PDF: {OUTPUT_PDF}（{len(highlights)}条划线）")
 
 
 if __name__ == "__main__":
