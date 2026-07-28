@@ -82,6 +82,11 @@ def escape_html(text):
 def generate(highlights):
     cards = [h["text"] for h in highlights if h.get("text")]
     per_page = 6
+    max_pages = 150  # 上限 150 页 = 900 条卡片，避免渲染过慢
+    total_pages = (len(cards) + per_page - 1) // per_page
+    if total_pages > max_pages:
+        print(f"划线过多（{len(cards)}条/{total_pages}页），截断为前{max_pages}页（{max_pages*per_page}条）")
+        cards = cards[:max_pages * per_page]
     pages_html = []
 
     # 裁剪线位置
