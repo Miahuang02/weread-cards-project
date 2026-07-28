@@ -16,12 +16,18 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: 安装Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
       - name: 安装系统依赖
         run: |
           sudo apt-get update
           sudo apt-get install -y libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0 libffi-dev libjpeg-dev libopenjp2-7-dev
       - name: 安装Python依赖
         run: pip install requests weasyprint
+      - name: 安装wrangler
+        run: npm install -g wrangler
       - name: 拉取微信读书划线
         env:
           WEREAD_API_KEY: ${{ secrets.WEREAD_API_KEY }}
@@ -39,3 +45,8 @@ jobs:
           git diff --staged --quiet || git commit -m "自动同步划线"
           git pull --rebase origin main
           git push
+      - name: 部署到Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: wrangler pages deploy . --project-name weread-cards --branch main --commit-dirty=true
