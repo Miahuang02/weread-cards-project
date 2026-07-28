@@ -25,13 +25,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0 libffi-dev libjpeg-dev libopenjp2-7-dev
       - name: 安装Python依赖
-        run: pip install requests weasyprint
+        run: pip install requests reportlab fonttools
       - name: 安装wrangler
         run: npm install -g wrangler
       - name: 拉取微信读书划线
         env:
           WEREAD_API_KEY: ${{ secrets.WEREAD_API_KEY }}
         run: python scripts/sync_weread.py
+      - name: 准备中文字体子集
+        run: python scripts/prepare_font.py
       - name: 生成卡片网页
         run: python scripts/generate_html.py
       - name: 生成打印PDF
@@ -41,7 +43,7 @@ jobs:
         run: |
           git config user.name github-actions[bot]
           git config user.email github-actions[bot]@users.noreply.github.com
-          git add data/highlights.json index.html highlights.pdf print.html
+          git add data/highlights.json index.html highlights.pdf print.html NotoSansSC-subset.ttf
           git diff --staged --quiet || git commit -m "自动同步划线"
           git pull --rebase origin main
           git push

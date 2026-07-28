@@ -90,6 +90,9 @@ def fetch_bookmarks(api_key, book_id, book_title=""):
 def parse_bookmarks(bookmarks, chapters, book_title):
     """把原始划线转成统一格式"""
     results = []
+    # 清洗书名：去掉可能的 UUID 前缀
+    if book_title and "_" in book_title:
+        book_title = book_title.split("_", 1)[1]
     for bm in bookmarks:
         text = bm.get("markText", "").strip()
         chapter_uid = bm.get("chapterUid")

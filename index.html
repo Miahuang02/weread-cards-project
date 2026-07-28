@@ -305,6 +305,12 @@ function shuffle(arr) {
   return a;
 }
 
+function cleanBookName(book) {
+  if (!book) return '未知书名';
+  if (book.indexOf('_') !== -1) return book.split('_').slice(1).join('_');
+  return book;
+}
+
 function updateCards() {
   let filtered = ALL_CARDS;
   const q = searchBox.value.trim();
@@ -332,7 +338,7 @@ function render() {
   cardEl.style.display = 'flex';
   emptyEl.style.display = 'none';
   const c = shuffled[index];
-  bookEl.innerHTML = esc(c.book);
+  bookEl.innerHTML = esc(cleanBookName(c.book));
   textEl.innerHTML = esc(c.text);
   chapterEl.innerHTML = esc(c.chapter || '');
   progressBar.style.width = ((index + 1) / shuffled.length * 100) + '%';
